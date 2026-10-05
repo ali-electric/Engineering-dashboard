@@ -1,6 +1,6 @@
 ```html
 <!DOCTYPE html>
-<html lang="id" class="h-full">
+<html lang="id" class="h-full bg-slate-900 text-slate-100">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,1168 +13,1458 @@
             theme: {
                 extend: {
                     colors: {
-                        industrial: {
-                            50: '#f4f6f8',
-                            100: '#e1e7ed',
-                            200: '#c5d2dc',
-                            300: '#9fb5c6',
-                            400: '#7594ab',
-                            500: '#567893',
-                            600: '#425f77',
-                            700: '#364e62',
-                            800: '#2e4151',
-                            900: '#283744',
-                            950: '#19242e',
-                        },
-                        brand: {
-                            50: '#eef8ff',
-                            500: '#0284c7',
-                            600: '#026aa2',
-                            700: '#034f77',
+                        slate: {
+                            850: '#151f32',
+                            950: '#0b1120'
                         }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
                     }
                 }
             }
         }
     </script>
-    <!-- Google Fonts & FontAwesome -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Chart.js -->
+    <!-- Chart.js for Analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- SheetJS (Excel Export) -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- jsPDF & AutoTable -->
+    <!-- SheetJS for Excel/CSV Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- jsPDF for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        /* Custom Scrollbar for Industrial Clean look */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0b1120; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        /* Custom scrollbar */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
-<body class="h-full bg-industrial-50 text-industrial-900 overflow-hidden">
+<body class="h-full flex flex-col overflow-hidden font-sans bg-slate-950 text-slate-100 select-none">
 
-    <div id="app" class="flex h-full w-full">
-        
-        <!-- SIDEBAR NAVIGATION -->
-        <aside id="sidebar" class="w-64 bg-industrial-900 text-industrial-100 flex flex-col z-20 transition-all duration-300 shadow-xl lg:static fixed inset-y-0 left-0 -translate-x-full lg:translate-x-0">
-            <div class="p-4 border-b border-industrial-800 flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <div class="bg-brand-500 text-white p-2 rounded-lg shadow-md">
-                        <i class="fa-solid fa-gears text-xl"></i>
+    <!-- Top Navbar -->
+    <header class="bg-slate-900 border-b border-slate-800 h-16 flex items-center justify-between px-4 lg:px-6 z-20 flex-shrink-0">
+        <div class="flex items-center space-x-3">
+            <button id="sidebarToggle" class="text-slate-400 hover:text-white p-2 rounded-lg lg:hidden focus:outline-none">
+                <i class="fa-solid fa-bars text-xl"></i>
+            </button>
+            <div class="flex items-center space-x-2">
+                <div class="bg-cyan-600 text-white p-2 rounded-xl shadow-lg shadow-cyan-900/50">
+                    <i class="fa-solid fa-gears text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg tracking-wider text-white leading-none">EMMS <span class="text-cyan-400 text-xs px-2 py-0.5 bg-cyan-950 border border-cyan-800 rounded-full ml-1">v3.5 PRO</span></h1>
+                    <p class="text-xs text-slate-400">Engineering & Maintenance Management System</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Search & Status ticker -->
+        <div class="hidden md:flex items-center bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 w-80">
+            <i class="fa-solid fa-search text-slate-400 mr-2 text-sm"></i>
+            <input type="text" id="globalSearch" placeholder="Cari Asset, WO, atau Kerusakan..." class="bg-transparent border-none text-sm text-white focus:outline-none w-full">
+        </div>
+
+        <!-- Right User & Quick Nav -->
+        <div class="flex items-center space-x-3">
+            <div class="relative">
+                <button id="notificationBtn" onclick="toggleNotifications()" class="relative p-2.5 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition">
+                    <i class="fa-solid fa-bell"></i>
+                    <span id="notifBadge" class="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-slate-900">3</span>
+                </button>
+                <!-- Notification Dropdown -->
+                <div id="notifDropdown" class="hidden absolute right-0 mt-2 w-80 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-2 z-50">
+                    <div class="px-4 py-2 border-b border-slate-800 flex justify-between items-center">
+                        <span class="font-semibold text-sm">Pusat Notifikasi</span>
+                        <span class="text-xs text-cyan-400 cursor-pointer" onclick="markAllRead()">Tandai Dibaca</span>
                     </div>
-                    <div>
-                        <h1 class="font-bold text-lg tracking-wide text-white">EMMS Pro</h1>
-                        <p class="text-xs text-industrial-400">Maintenance & Engineering</p>
+                    <div id="notifList" class="max-h-72 overflow-y-auto divide-y divide-slate-800 text-xs">
+                        <div class="p-3 hover:bg-slate-800 cursor-pointer">
+                            <p class="font-medium text-amber-400"><i class="fa-solid fa-triangle-exclamation mr-1"></i> PM Overdue: Kompresor Utama #2</p>
+                            <span class="text-[10px] text-slate-500">10 Menit lalu</span>
+                        </div>
+                        <div class="p-3 hover:bg-slate-800 cursor-pointer">
+                            <p class="font-medium text-rose-400"><i class="fa-solid fa-bolt mr-1"></i> Breakdown: LVMDP Panel Utama #1</p>
+                            <span class="text-[10px] text-slate-500">1 Jam lalu</span>
+                        </div>
+                        <div class="p-3 hover:bg-slate-800 cursor-pointer">
+                            <p class="font-medium text-cyan-400"><i class="fa-solid fa-box-archive mr-1"></i> Low Stock: Bearing 6204 (Sisa 2)</p>
+                            <span class="text-[10px] text-slate-500">3 Jam lalu</span>
+                        </div>
                     </div>
                 </div>
-                <button onclick="toggleSidebar()" class="lg:hidden text-industrial-400 hover:text-white">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
             </div>
 
-            <!-- Navigation Links -->
-            <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-                <a href="#" onclick="switchTab('dashboard')" class="nav-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition bg-brand-600 text-white shadow-sm" data-tab="dashboard">
+            <!-- Role Selector -->
+            <div class="hidden sm:flex items-center space-x-2 bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs">
+                <i class="fa-solid fa-user-shield text-cyan-400"></i>
+                <select id="roleSelector" onchange="switchRole(this.value)" class="bg-transparent border-none text-slate-200 focus:outline-none cursor-pointer">
+                    <option value="Admin" class="bg-slate-900">Admin / Manager</option>
+                    <option value="Engineer" class="bg-slate-900">Engineering Manager</option>
+                    <option value="Supervisor" class="bg-slate-900">Maintenance Supervisor</option>
+                    <option value="Technician" class="bg-slate-900">Teknisi Lapangan</option>
+                    <option value="Operator" class="bg-slate-900">Operator</option>
+                </select>
+            </div>
+
+            <div class="flex items-center space-x-2 bg-slate-800 border border-slate-700 rounded-xl p-1.5 pr-3">
+                <div class="w-7 h-7 bg-cyan-700 rounded-lg flex items-center justify-center font-bold text-white text-xs">AD</div>
+                <div class="text-left hidden xl:block">
+                    <p class="text-xs font-semibold leading-none">Andi Pratama</p>
+                    <p id="userRoleDisplay" class="text-[10px] text-cyan-400">Engineering Manager</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main App Wrapper -->
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-300 z-10 lg:translate-x-0 -translate-x-full absolute lg:relative h-full">
+            <div class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+                <div class="text-[10px] font-bold text-slate-500 uppercase px-3 pb-1 tracking-wider">UTAMA</div>
+                <a href="#" onclick="switchTab('dashboard')" class="sidebar-link flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white bg-cyan-600 shadow-lg shadow-cyan-900/30 transition">
                     <i class="fa-solid fa-chart-pie w-5 text-center"></i>
                     <span>Dashboard Utama</span>
                 </a>
-                <a href="#" onclick="switchTab('sasaran-mutu')" class="nav-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-industrial-300 hover:bg-industrial-800 hover:text-white" data-tab="sasaran-mutu">
-                    <i class="fa-solid fa-bullseye w-5 text-center"></i>
+                <a href="#" onclick="switchTab('sasaranMutu')" class="sidebar-link flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-bullseye w-5 text-center text-cyan-400"></i>
                     <span>Sasaran Mutu (KPI)</span>
                 </a>
-                <a href="#" onclick="switchTab('assets')" class="nav-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-industrial-300 hover:bg-industrial-800 hover:text-white" data-tab="assets">
-                    <i class="fa-solid fa-cubes w-5 text-center"></i>
-                    <span>Asset & Equipment</span>
+
+                <div class="pt-4 text-[10px] font-bold text-slate-500 uppercase px-3 pb-1 tracking-wider">MODUL OPERASIONAL</div>
+                <a href="#" onclick="switchTab('preventive')" class="sidebar-link flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-calendar-check w-5 text-center text-emerald-400"></i>
+                    <span>Preventive Maint. (PM)</span>
                 </a>
-                <a href="#" onclick="switchTab('mechanical')" class="nav-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-industrial-300 hover:bg-industrial-800 hover:text-white" data-tab="mechanical">
-                    <i class="fa-solid fa-screwdriver-wrench w-5 text-center"></i>
-                    <span>Mechanical</span>
+                <a href="#" onclick="switchTab('corrective')" class="sidebar-link flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-screwdriver-wrench w-5 text-center text-amber-400"></i>
+                    <span>Corrective (Perbaikan)</span>
                 </a>
-                <a href="#" onclick="switchTab('electrical')" class="nav-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-industrial-300 hover:bg-industrial-800 hover:text-white" data-tab="electrical">
-                    <i class="fa-solid fa-bolt w-5 text-center"></i>
-                    <span>Electrical</span>
+                <a href="#" onclick="switchTab('breakdown')" class="sidebar-link flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-triangle-exclamation w-5 text-center text-rose-500"></i>
+                    <span>Breakdown & RCA</span>
                 </a>
-                <a href="#" onclick="switchTab('automotive')" class="nav-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-industrial-300 hover:bg-industrial-800 hover:text-white" data-tab="automotive">
-                    <i class="fa-solid fa-truck-front w-5 text-center"></i>
-                    <span>Automotive / Fleet</span>
-                </a>
-                <a href="#" onclick="switchTab('preventive')" class="nav-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-industrial-300 hover:bg-industrial-800 hover:text-white" data-tab="preventive">
-                    <i class="fa-solid fa-calendar-check w-5 text-center"></i>
-                    <span>Preventive Maintenance</span>
-                </a>
-                <a href="#" onclick="switchTab('corrective')" class="nav-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-industrial-300 hover:bg-industrial-800 hover:text-white" data-tab="corrective">
-                    <i class="fa-solid fa-wrench w-5 text-center"></i>
-                    <span>Corrective Maintenance</span>
-                </a>
-                <a href="#" onclick="switchTab('breakdown')" class="nav-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-industrial-300 hover:bg-industrial-800 hover:text-white" data-tab="breakdown">
-                    <i class="fa-solid fa-triangle-exclamation w-5 text-center text-red-400"></i>
-                    <span>Breakdown Emergency</span>
-                </a>
-                <a href="#" onclick="switchTab('workorder')" class="nav-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-industrial-300 hover:bg-industrial-800 hover:text-white" data-tab="workorder">
-                    <i class="fa-solid fa-file-invoice w-5 text-center"></i>
+                <a href="#" onclick="switchTab('workOrder')" class="sidebar-link flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-file-invoice w-5 text-center text-sky-400"></i>
                     <span>Work Order (WO)</span>
                 </a>
-                <a href="#" onclick="switchTab('inspection')" class="nav-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-industrial-300 hover:bg-industrial-800 hover:text-white" data-tab="inspection">
-                    <i class="fa-solid fa-clipboard-check w-5 text-center"></i>
+                <a href="#" onclick="switchTab('planning')" class="sidebar-link flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-calendar-days w-5 text-center text-indigo-400"></i>
+                    <span>Planning & Scheduling</span>
+                </a>
+                <a href="#" onclick="switchTab('inspection')" class="sidebar-link flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-clipboard-check w-5 text-center text-teal-400"></i>
                     <span>Inspection & Checklist</span>
                 </a>
-                <a href="#" onclick="switchTab('planning')" class="nav-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-industrial-300 hover:bg-industrial-800 hover:text-white" data-tab="planning">
-                    <i class="fa-solid fa-calendar-days w-5 text-center"></i>
-                    <span>Planning & Schedule</span>
+
+                <div class="pt-4 text-[10px] font-bold text-slate-500 uppercase px-3 pb-1 tracking-wider">ASSET & TEKNIKAL</div>
+                <a href="#" onclick="switchTab('assets')" class="sidebar-link flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-industry w-5 text-center text-blue-400"></i>
+                    <span>Asset & Equipment</span>
                 </a>
-                <a href="#" onclick="switchTab('inventory')" class="nav-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-industrial-300 hover:bg-industrial-800 hover:text-white" data-tab="inventory">
-                    <i class="fa-solid fa-boxes-stacked w-5 text-center"></i>
-                    <span>Spare Part & Inventory</span>
+                <a href="#" onclick="switchTab('mechanical')" class="sidebar-link flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-cogs w-5 text-center text-orange-400"></i>
+                    <span>Mechanical Module</span>
                 </a>
-                <a href="#" onclick="switchTab('documents')" class="nav-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-industrial-300 hover:bg-industrial-800 hover:text-white" data-tab="documents">
-                    <i class="fa-solid fa-folder-open w-5 text-center"></i>
-                    <span>Dokumentasi & QR</span>
+                <a href="#" onclick="switchTab('electrical')" class="sidebar-link flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-bolt-lightning w-5 text-center text-yellow-400"></i>
+                    <span>Electrical Module</span>
                 </a>
-                <a href="#" onclick="switchTab('analytics')" class="nav-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-industrial-300 hover:bg-industrial-800 hover:text-white" data-tab="analytics">
-                    <i class="fa-solid fa-chart-line w-5 text-center"></i>
+                <a href="#" onclick="switchTab('automotive')" class="sidebar-link flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-truck-front w-5 text-center text-purple-400"></i>
+                    <span>Automotive & Fleet</span>
+                </a>
+                <a href="#" onclick="switchTab('inventory')" class="sidebar-link flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-boxes-stacked w-5 text-center text-emerald-400"></i>
+                    <span>Spare Part & Warehouse</span>
+                </a>
+
+                <div class="pt-4 text-[10px] font-bold text-slate-500 uppercase px-3 pb-1 tracking-wider">LAPORAN & ANALISIS</div>
+                <a href="#" onclick="switchTab('analytics')" class="sidebar-link flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-chart-line w-5 text-center text-cyan-400"></i>
                     <span>Analytics & MTBF/MTTR</span>
                 </a>
-                <a href="#" onclick="switchTab('reports')" class="nav-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-industrial-300 hover:bg-industrial-800 hover:text-white" data-tab="reports">
-                    <i class="fa-solid fa-file-excel w-5 text-center"></i>
-                    <span>Laporan (PDF/Excel)</span>
+                <a href="#" onclick="switchTab('reports')" class="sidebar-link flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-file-pdf w-5 text-center text-rose-400"></i>
+                    <span>Export & Reports</span>
                 </a>
-            </nav>
-
-            <!-- Footer User Info -->
-            <div class="p-4 border-t border-industrial-800 bg-industrial-950 flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <div class="w-9 h-9 rounded-full bg-brand-600 flex items-center justify-center font-bold text-white">
-                        EN
-                    </div>
-                    <div>
-                        <p class="text-xs font-semibold text-white">Engineering Mgr</p>
-                        <p class="text-[10px] text-industrial-400">Plant #01 - Utama</p>
-                    </div>
+            </div>
+            <div class="p-3 border-t border-slate-800 bg-slate-950/50">
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                    <span>Server Status</span>
+                    <span class="flex items-center text-emerald-400"><span class="w-2 h-2 bg-emerald-500 rounded-full animate-ping mr-1.5"></span> ONLINE</span>
                 </div>
-                <button onclick="showNotificationCenter()" class="text-industrial-400 hover:text-white relative">
-                    <i class="fa-solid fa-bell"></i>
-                    <span class="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold" id="notif-badge">3</span>
-                </button>
             </div>
         </aside>
 
-        <main class="flex-1 flex flex-col h-full overflow-hidden bg-industrial-50">
-            
-            <!-- TOP NAVBAR -->
-            <header class="h-16 bg-white border-b border-industrial-200 px-6 flex items-center justify-between shadow-sm z-10">
-                <div class="flex items-center space-x-4">
-                    <button onclick="toggleSidebar()" class="lg:hidden text-industrial-600 hover:text-industrial-900 focus:outline-none">
-                        <i class="fa-solid fa-bars text-xl"></i>
-                    </button>
+        <!-- Main Content View Area -->
+        <main class="flex-1 overflow-y-auto bg-slate-950 p-4 lg:p-6 relative">
+
+            <!-- TAB 1: DASHBOARD UTAMA -->
+            <div id="tab-dashboard" class="tab-content active space-y-6">
+                <!-- Header Title & Quick Action -->
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
                     <div>
-                        <h2 id="page-title" class="text-lg font-bold text-industrial-800">Dashboard Utama</h2>
-                        <p class="text-xs text-industrial-500 flex items-center space-x-2">
-                            <span id="current-datetime" class="font-medium text-industrial-600">Senin, 5 Oktober 2026 13:02</span>
-                            <span>•</span>
-                            <span class="text-emerald-600 font-semibold"><i class="fa-solid fa-circle text-[8px] mr-1"></i> System Online</span>
-                        </p>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-cyan-400 bg-cyan-950 px-3 py-1 rounded-full border border-cyan-800">Plant Operation Live</span>
+                            <span id="liveDateTime" class="text-xs text-slate-400">Senin, 05 Okt 2026 - 13:23 WIB</span>
+                        </div>
+                        <h2 class="text-2xl font-black text-white mt-1">ENGINEERING & MAINTENANCE MANAGEMENT SYSTEM</h2>
+                        <p class="text-sm text-slate-400">Monitoring real-time kehandalan mesin, work order, dan sasaran mutu pabrik.</p>
+                    </div>
+                    <!-- Quick Action Buttons -->
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="openModal('woModal')" class="bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-lg shadow-cyan-900/40 flex items-center space-x-2 transition">
+                            <i class="fa-solid fa-plus"></i><span>Buat WO</span>
+                        </button>
+                        <button onclick="openModal('breakdownModal')" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-lg shadow-rose-900/40 flex items-center space-x-2 transition">
+                            <i class="fa-solid fa-triangle-exclamation"></i><span>Lapor Breakdown</span>
+                        </button>
+                        <button onclick="openModal('pmModal')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-lg shadow-emerald-900/40 flex items-center space-x-2 transition">
+                            <i class="fa-solid fa-calendar-check"></i><span>Preventive Maint.</span>
+                        </button>
+                        <button onclick="openModal('inspectionModal')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-lg shadow-indigo-900/40 flex items-center space-x-2 transition">
+                            <i class="fa-solid fa-clipboard-check"></i><span>Inspeksi</span>
+                        </button>
                     </div>
                 </div>
 
-                <!-- Quick Action Buttons & Profile -->
-                <div class="flex items-center space-x-3">
-                    <div class="hidden md:flex items-center space-x-2">
-                        <button onclick="openModal('modal-wo')" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-sm transition flex items-center space-x-1.5">
-                            <i class="fa-solid fa-plus"></i>
-                            <span>Buat WO</span>
-                        </button>
-                        <button onclick="openModal('modal-breakdown')" class="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-sm transition flex items-center space-x-1.5">
-                            <i class="fa-solid fa-triangle-exclamation"></i>
-                            <span>Lapor Kerusakan</span>
-                        </button>
-                        <button onclick="openModal('modal-pm')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-sm transition flex items-center space-x-1.5">
-                            <i class="fa-solid fa-calendar-check"></i>
-                            <span>Preventive</span>
-                        </button>
+                <!-- 10 Primary Metric Cards -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-lg">
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-semibold text-slate-400">Total Asset</span>
+                            <div class="p-2 bg-blue-950 text-blue-400 rounded-xl"><i class="fa-solid fa-industry"></i></div>
+                        </div>
+                        <h3 class="text-2xl font-black text-white mt-2">148</h3>
+                        <p class="text-[11px] text-emerald-400 mt-1"><i class="fa-solid fa-arrow-up"></i> 100% Terinventarisasi</p>
                     </div>
-
-                    <div class="h-6 w-px bg-industrial-200 hidden md:block"></div>
-
-                    <!-- Search Quick -->
-                    <div class="relative hidden sm:block">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-industrial-400">
-                            <i class="fa-solid fa-search text-xs"></i>
-                        </span>
-                        <input type="text" placeholder="Cari asset, WO, spare part..." class="pl-9 pr-4 py-1.5 text-xs bg-industrial-100 focus:bg-white border border-transparent focus:border-brand-500 rounded-lg w-48 lg:w-64 focus:outline-none transition">
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-lg">
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-semibold text-slate-400">Total Work Order</span>
+                            <div class="p-2 bg-sky-950 text-sky-400 rounded-xl"><i class="fa-solid fa-file-invoice"></i></div>
+                        </div>
+                        <h3 class="text-2xl font-black text-white mt-2">34</h3>
+                        <p class="text-[11px] text-sky-400 mt-1">Bulan Berjalan</p>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-lg">
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-semibold text-slate-400">Preventive Maint.</span>
+                            <div class="p-2 bg-emerald-950 text-emerald-400 rounded-xl"><i class="fa-solid fa-calendar-check"></i></div>
+                        </div>
+                        <h3 class="text-2xl font-black text-white mt-2">18</h3>
+                        <p class="text-[11px] text-emerald-400 mt-1">Compliance: 96%</p>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-lg">
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-semibold text-slate-400">Corrective Maint.</span>
+                            <div class="p-2 bg-amber-950 text-amber-400 rounded-xl"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+                        </div>
+                        <h3 class="text-2xl font-black text-white mt-2">12</h3>
+                        <p class="text-[11px] text-amber-400 mt-1">8 Selesai, 4 Proses</p>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-lg">
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-semibold text-slate-400">Breakdown Aktif</span>
+                            <div class="p-2 bg-rose-950 text-rose-500 rounded-xl"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        </div>
+                        <h3 class="text-2xl font-black text-rose-500 mt-2">2</h3>
+                        <p class="text-[11px] text-rose-400 mt-1">Critical Priority</p>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-lg">
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-semibold text-slate-400">Pekerjaan Selesai</span>
+                            <div class="p-2 bg-emerald-950 text-emerald-400 rounded-xl"><i class="fa-solid fa-circle-check"></i></div>
+                        </div>
+                        <h3 class="text-2xl font-black text-white mt-2">28</h3>
+                        <p class="text-[11px] text-emerald-400 mt-1">92% Tepat Waktu</p>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-lg">
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-semibold text-slate-400">Pekerjaan Berjalan</span>
+                            <div class="p-2 bg-blue-950 text-blue-400 rounded-xl"><i class="fa-solid fa-spinner"></i></div>
+                        </div>
+                        <h3 class="text-2xl font-black text-white mt-2">4</h3>
+                        <p class="text-[11px] text-blue-400 mt-1">On Schedule</p>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-lg">
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-semibold text-slate-400">Overdue Task</span>
+                            <div class="p-2 bg-rose-950 text-rose-400 rounded-xl"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                        </div>
+                        <h3 class="text-2xl font-black text-rose-400 mt-2">2</h3>
+                        <p class="text-[11px] text-rose-400 mt-1">Perlu Perhatian</p>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-lg">
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-semibold text-slate-400">Equipment Health</span>
+                            <div class="p-2 bg-teal-950 text-teal-400 rounded-xl"><i class="fa-solid fa-heart-pulse"></i></div>
+                        </div>
+                        <h3 class="text-2xl font-black text-teal-400 mt-2">94.5%</h3>
+                        <p class="text-[11px] text-teal-400 mt-1">Kondisi Prima</p>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-lg">
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-semibold text-slate-400">Total Downtime</span>
+                            <div class="p-2 bg-purple-950 text-purple-400 rounded-xl"><i class="fa-solid fa-stopwatch"></i></div>
+                        </div>
+                        <h3 class="text-2xl font-black text-white mt-2">4.5 Jam</h3>
+                        <p class="text-[11px] text-purple-400 mt-1">Bulan Ini</p>
                     </div>
                 </div>
-            </header>
 
-            <div class="flex-1 overflow-y-auto p-4 lg:p-6" id="main-container">
-                
-                <!-- TAB 1: DASHBOARD UTAMA -->
-                <div id="tab-dashboard" class="tab-content active space-y-6">
-                    <!-- Critical Alert Banner -->
-                    <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg shadow-sm flex items-center justify-between">
-                        <div class="flex items-center space-x-3">
-                            <div class="text-red-500 text-2xl animate-pulse">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                            </div>
-                            <div>
-                                <h4 class="text-sm font-bold text-red-800">CRITICAL BREAKDOWN ACTIVE: Compressor Utama #02 (Line 3)</h4>
-                                <p class="text-xs text-red-600">Downtime: 2 jam 15 menit | Menunggu persetujuan Spare Part Gasket Seal oleh Supervisor.</p>
-                            </div>
-                        </div>
-                        <button onclick="switchTab('breakdown')" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded font-medium shadow transition">
-                            Tindak Lanjuti
-                        </button>
-                    </div>
-
-                    <!-- Summary KPI Cards -->
-                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                        <div class="bg-white p-4 rounded-xl border border-industrial-200 shadow-sm">
-                            <p class="text-xs font-semibold text-industrial-500 uppercase">Total Asset</p>
-                            <h3 class="text-2xl font-bold text-industrial-800 mt-1" id="stat-total-asset">124</h3>
-                            <div class="mt-2 flex items-center text-xs text-emerald-600 font-medium">
-                                <i class="fa-solid fa-shield-halved mr-1"></i> 94% Kondisi Sehat
-                            </div>
-                        </div>
-                        <div class="bg-white p-4 rounded-xl border border-industrial-200 shadow-sm">
-                            <p class="text-xs font-semibold text-industrial-500 uppercase">Total Work Order</p>
-                            <h3 class="text-2xl font-bold text-brand-600 mt-1" id="stat-total-wo">48</h3>
-                            <div class="mt-2 flex items-center text-xs text-industrial-500">
-                                <span>Bulan Berjalan</span>
-                            </div>
-                        </div>
-                        <div class="bg-white p-4 rounded-xl border border-industrial-200 shadow-sm">
-                            <p class="text-xs font-semibold text-industrial-500 uppercase">Preventive Maint.</p>
-                            <h3 class="text-2xl font-bold text-emerald-600 mt-1">32</h3>
-                            <div class="mt-2 flex items-center text-xs text-emerald-600 font-medium">
-                                <i class="fa-solid fa-check mr-1"></i> Compliance: 96%
-                            </div>
-                        </div>
-                        <div class="bg-white p-4 rounded-xl border border-industrial-200 shadow-sm">
-                            <p class="text-xs font-semibold text-industrial-500 uppercase">Corrective Maint.</p>
-                            <h3 class="text-2xl font-bold text-amber-600 mt-1">12</h3>
-                            <div class="mt-2 flex items-center text-xs text-amber-600 font-medium">
-                                <i class="fa-solid fa-clock mr-1"></i> 3 Dalam Proses
-                            </div>
-                        </div>
-                        <div class="bg-white p-4 rounded-xl border border-industrial-200 shadow-sm">
-                            <p class="text-xs font-semibold text-industrial-500 uppercase">Breakdown</p>
-                            <h3 class="text-2xl font-bold text-red-600 mt-1">2</h3>
-                            <div class="mt-2 flex items-center text-xs text-red-600 font-medium">
-                                <i class="fa-solid fa-triangle-exclamation mr-1"></i> 1 Urgent
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Secondary Metric Grid -->
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        <div class="bg-white p-4 rounded-xl border border-industrial-200 flex items-center justify-between">
-                            <div>
-                                <p class="text-xs font-medium text-industrial-500">Equipment Availability</p>
-                                <h4 class="text-xl font-bold text-industrial-800 mt-1">98.4%</h4>
-                            </div>
-                            <div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                                <i class="fa-solid fa-chart-pie"></i>
-                            </div>
-                        </div>
-                        <div class="bg-white p-4 rounded-xl border border-industrial-200 flex items-center justify-between">
-                            <div>
-                                <p class="text-xs font-medium text-industrial-500">MTBF (Mean Time Between Failures)</p>
-                                <h4 class="text-xl font-bold text-industrial-800 mt-1">340 Jam</h4>
-                            </div>
-                            <div class="w-10 h-10 rounded-full bg-blue-50 text-brand-600 flex items-center justify-center font-bold">
-                                <i class="fa-solid fa-gauge"></i>
-                            </div>
-                        </div>
-                        <div class="bg-white p-4 rounded-xl border border-industrial-200 flex items-center justify-between">
-                            <div>
-                                <p class="text-xs font-medium text-industrial-500">MTTR (Mean Time To Repair)</p>
-                                <h4 class="text-xl font-bold text-industrial-800 mt-1">1.8 Jam</h4>
-                            </div>
-                            <div class="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-                                <i class="fa-solid fa-stopwatch"></i>
-                            </div>
-                        </div>
-                        <div class="bg-white p-4 rounded-xl border border-industrial-200 flex items-center justify-between">
-                            <div>
-                                <p class="text-xs font-medium text-industrial-500">Total Downtime Bulanan</p>
-                                <h4 class="text-xl font-bold text-red-600 mt-1">14.5 Jam</h4>
-                            </div>
-                            <div class="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center font-bold">
-                                <i class="fa-solid fa-hourglass-half"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Charts & Quick Action Section -->
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <!-- Chart Area -->
-                        <div class="bg-white p-5 rounded-xl border border-industrial-200 shadow-sm lg:col-span-2">
+                <!-- Critical Breakdown Alert Banner & Quick Tables -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Left: Active Breakdowns & Priority Wos -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="bg-slate-900 border border-rose-900/50 rounded-2xl p-5 shadow-xl">
                             <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-sm font-bold text-industrial-800"><i class="fa-solid fa-chart-column mr-2 text-brand-600"></i>Grafik Preventive vs Corrective & Breakdown</h3>
-                                <div class="flex space-x-2 text-xs">
-                                    <button class="bg-industrial-100 hover:bg-industrial-200 px-2.5 py-1 rounded font-medium">Bulan Ini</button>
+                                <div class="flex items-center space-x-2">
+                                    <span class="w-3 h-3 bg-rose-500 rounded-full animate-ping"></span>
+                                    <h3 class="font-bold text-rose-400 text-base">CRITICAL BREAKDOWN ACTIVE</h3>
                                 </div>
+                                <span class="text-xs bg-rose-950 text-rose-400 px-2.5 py-1 rounded-full border border-rose-800">2 Unit Terganggu</span>
                             </div>
-                            <div class="h-64 relative">
-                                <canvas id="mainChart"></canvas>
-                            </div>
-                        </div>
-
-                        <!-- Quick Actions Panel -->
-                        <div class="bg-white p-5 rounded-xl border border-industrial-200 shadow-sm flex flex-col justify-between">
-                            <div>
-                                <h3 class="text-sm font-bold text-industrial-800 mb-3"><i class="fa-solid fa-bolt mr-2 text-brand-600"></i>Quick Action Menu</h3>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <button onclick="openModal('modal-wo')" class="p-3 bg-industrial-50 hover:bg-brand-50 hover:text-brand-600 rounded-lg text-xs font-semibold border border-industrial-200 transition text-left flex flex-col space-y-1">
-                                        <i class="fa-solid fa-file-invoice text-brand-600 text-base"></i>
-                                        <span>Buat Work Order</span>
-                                    </button>
-                                    <button onclick="openModal('modal-breakdown')" class="p-3 bg-industrial-50 hover:bg-red-50 hover:text-red-600 rounded-lg text-xs font-semibold border border-industrial-200 transition text-left flex flex-col space-y-1">
-                                        <i class="fa-solid fa-triangle-exclamation text-red-600 text-base"></i>
-                                        <span>Lapor Kerusakan</span>
-                                    </button>
-                                    <button onclick="openModal('modal-pm')" class="p-3 bg-industrial-50 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg text-xs font-semibold border border-industrial-200 transition text-left flex flex-col space-y-1">
-                                        <i class="fa-solid fa-calendar-check text-emerald-600 text-base"></i>
-                                        <span>Preventive Maint.</span>
-                                    </button>
-                                    <button onclick="switchTab('inspection')" class="p-3 bg-industrial-50 hover:bg-blue-50 hover:text-blue-600 rounded-lg text-xs font-semibold border border-industrial-200 transition text-left flex flex-col space-y-1">
-                                        <i class="fa-solid fa-clipboard-check text-blue-600 text-base"></i>
-                                        <span>Checklist Inspeksi</span>
-                                    </button>
-                                    <button onclick="switchTab('inventory')" class="p-3 bg-industrial-50 hover:bg-amber-50 hover:text-amber-600 rounded-lg text-xs font-semibold border border-industrial-200 transition text-left flex flex-col space-y-1">
-                                        <i class="fa-solid fa-boxes-stacked text-amber-600 text-base"></i>
-                                        <span>Cek Spare Part</span>
-                                    </button>
-                                    <button onclick="switchTab('reports')" class="p-3 bg-industrial-50 hover:bg-purple-50 hover:text-purple-600 rounded-lg text-xs font-semibold border border-industrial-200 transition text-left flex flex-col space-y-1">
-                                        <i class="fa-solid fa-file-excel text-purple-600 text-base"></i>
-                                        <span>Ekspor Laporan</span>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="mt-4 pt-3 border-t border-industrial-100 text-center text-xs text-industrial-400">
-                                EMMS Industrial Standard v3.5 • ISO 9001 Compliant
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Recent Work Orders Table -->
-                    <div class="bg-white rounded-xl border border-industrial-200 shadow-sm overflow-hidden">
-                        <div class="px-5 py-4 border-b border-industrial-200 flex items-center justify-between">
-                            <h3 class="text-sm font-bold text-industrial-800"><i class="fa-solid fa-list-check mr-2 text-brand-600"></i>Draf & Pekerjaan Berjalan Terkini</h3>
-                            <button onclick="switchTab('workorder')" class="text-xs text-brand-600 font-semibold hover:underline">Lihat Semua WO</button>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left text-xs">
-                                <thead class="bg-industrial-100 text-industrial-700 uppercase font-semibold">
-                                    <tr>
-                                        <th class="px-4 py-3">WO Number</th>
-                                        <th class="px-4 py-3">Equipment</th>
-                                        <th class="px-4 py-3">Jenis Pekerjaan</th>
-                                        <th class="px-4 py-3">Prioritas</th>
-                                        <th class="px-4 py-3">Teknisi</th>
-                                        <th class="px-4 py-3">Status</th>
-                                        <th class="px-4 py-3 text-right">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-industrial-200" id="recent-wo-tbody">
-                                    <tr class="hover:bg-industrial-50">
-                                        <td class="px-4 py-3 font-semibold text-brand-600">WO-2026-0891</td>
-                                        <td class="px-4 py-3">Compressor Utama #02</td>
-                                        <td class="px-4 py-3">Corrective / Ganti Gasket Seal</td>
-                                        <td class="px-4 py-3"><span class="bg-red-100 text-red-700 px-2 py-0.5 rounded font-bold text-[10px]">High</span></td>
-                                        <td class="px-4 py-3">Budi Santoso</td>
-                                        <td class="px-4 py-3"><span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-semibold text-[10px]">In Progress</span></td>
-                                        <td class="px-4 py-3 text-right">
-                                            <button onclick="openModal('modal-wo-detail')" class="text-industrial-600 hover:text-brand-600 mr-2"><i class="fa-solid fa-eye"></i></button>
-                                            <button onclick="verifyWO(this)" class="text-emerald-600 hover:text-emerald-800"><i class="fa-solid fa-circle-check"></i></button>
-                                        </td>
-                                    </tr>
-                                    <tr class="hover:bg-industrial-50">
-                                        <td class="px-4 py-3 font-semibold text-brand-600">WO-2026-0890</td>
-                                        <td class="px-4 py-3">Panel LVMDP Utama</td>
-                                        <td class="px-4 py-3">Preventive / Thermography Check</td>
-                                        <td class="px-4 py-3"><span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold text-[10px]">Medium</span></td>
-                                        <td class="px-4 py-3">Ahmad Fauzi</td>
-                                        <td class="px-4 py-3"><span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold text-[10px]">Assigned</span></td>
-                                        <td class="px-4 py-3 text-right">
-                                            <button onclick="openModal('modal-wo-detail')" class="text-industrial-600 hover:text-brand-600 mr-2"><i class="fa-solid fa-eye"></i></button>
-                                            <button onclick="verifyWO(this)" class="text-emerald-600 hover:text-emerald-800"><i class="fa-solid fa-circle-check"></i></button>
-                                        </td>
-                                    </tr>
-                                    <tr class="hover:bg-industrial-50">
-                                        <td class="px-4 py-3 font-semibold text-brand-600">WO-2026-0889</td>
-                                        <td class="px-4 py-3">Forklift Toyota 3Ton (B 9128 U)</td>
-                                        <td class="px-4 py-3">Routine Service 500 Hours</td>
-                                        <td class="px-4 py-3"><span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold text-[10px]">Normal</span></td>
-                                        <td class="px-4 py-3">Joko Widodo</td>
-                                        <td class="px-4 py-3"><span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-semibold text-[10px]">Completed</span></td>
-                                        <td class="px-4 py-3 text-right">
-                                            <button onclick="openModal('modal-wo-detail')" class="text-industrial-600 hover:text-brand-600 mr-2"><i class="fa-solid fa-eye"></i></button>
-                                            <button onclick="verifyWO(this)" class="text-emerald-600 hover:text-emerald-800"><i class="fa-solid fa-circle-check"></i></button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="tab-sasaran-mutu" class="tab-content space-y-6">
-                    <div class="bg-white p-5 rounded-xl border border-industrial-200 shadow-sm">
-                        <h3 class="text-base font-bold text-industrial-800 mb-1"><i class="fa-solid fa-bullseye text-brand-600 mr-2"></i>Dashboard Sasaran Mutu (Quality Objective Maintenance)</h3>
-                        <p class="text-xs text-industrial-500 mb-4">Monitoring indikator kunci performa pemeliharaan fasilitas, pabrik, gedung, dan armada kendaraan perusahaan.</p>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <!-- Card Perawatan -->
-                            <div class="bg-industrial-50 p-4 rounded-xl border border-industrial-200">
-                                <h4 class="font-bold text-sm text-industrial-800 mb-3 border-b pb-2"><i class="fa-solid fa-shield-halved text-emerald-600 mr-2"></i>PERAWATAN (PREVENTIVE & AVAILABILITY)</h4>
-                                <div class="space-y-3 text-xs">
+                            <div class="space-y-3">
+                                <div class="bg-slate-950 border border-rose-900/30 p-3.5 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                                     <div>
-                                        <div class="flex justify-between font-semibold mb-1">
-                                            <span>Preventive Maintenance Compliance</span>
-                                            <span class="text-emerald-600">Target: 95% | Realisasi: 96%</span>
+                                        <div class="flex items-center space-x-2">
+                                            <span class="text-xs font-bold text-white bg-rose-600 px-2 py-0.5 rounded">BRK-2026-001</span>
+                                            <span class="text-sm font-bold text-slate-200">LVMDP Panel Utama #1</span>
                                         </div>
-                                        <div class="w-full bg-industrial-200 rounded-full h-2.5">
-                                            <div class="bg-emerald-600 h-2.5 rounded-full" style="width: 96%"></div>
-                                        </div>
+                                        <p class="text-xs text-slate-400 mt-1">Trip Overcurrent Main Breaker | Lokasi: Ruang Kontrol Utama</p>
                                     </div>
+                                    <div class="flex items-center space-x-3">
+                                        <div class="text-right">
+                                            <p class="text-xs text-rose-400 font-semibold">Downtime: 2j 15m</p>
+                                            <p class="text-[10px] text-slate-500">Teknisi: Budi Santoso</p>
+                                        </div>
+                                        <button onclick="openRCAModal('BRK-2026-001')" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition">Analisis RCA</button>
+                                    </div>
+                                </div>
+                                <div class="bg-slate-950 border border-rose-900/30 p-3.5 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                                     <div>
-                                        <div class="flex justify-between font-semibold mb-1">
-                                            <span>Equipment Availability</span>
-                                            <span class="text-emerald-600">Target: 98% | Realisasi: 98.4%</span>
+                                        <div class="flex items-center space-x-2">
+                                            <span class="text-xs font-bold text-white bg-rose-600 px-2 py-0.5 rounded">BRK-2026-002</span>
+                                            <span class="text-sm font-bold text-slate-200">Pompa Centrifugal BO-02</span>
                                         </div>
-                                        <div class="w-full bg-industrial-200 rounded-full h-2.5">
-                                            <div class="bg-brand-600 h-2.5 rounded-full" style="width: 98.4%"></div>
-                                        </div>
+                                        <p class="text-xs text-slate-400 mt-1">Mechanical Seal Jebol | Lokasi: Utility Water Plant</p>
                                     </div>
-                                    <div class="flex justify-between items-center bg-white p-3 rounded-lg border border-industrial-200">
-                                        <span class="font-medium text-industrial-700">Inspeksi Rutin Bulanan</span>
-                                        <span class="px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded font-bold text-[11px]">GOOD (124/124)</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Card Perbaikan -->
-                            <div class="bg-industrial-50 p-4 rounded-xl border border-industrial-200">
-                                <h4 class="font-bold text-sm text-industrial-800 mb-3 border-b pb-2"><i class="fa-solid fa-wrench text-brand-600 mr-2"></i>PERBAIKAN (CORRECTIVE & BREAKDOWN)</h4>
-                                <div class="space-y-3 text-xs">
-                                    <div>
-                                        <div class="flex justify-between font-semibold mb-1">
-                                            <span>Penanganan Kerusakan Tepat Waktu</span>
-                                            <span class="text-brand-600">Target: 90% | Realisasi: 91.5%</span>
+                                    <div class="flex items-center space-x-3">
+                                        <div class="text-right">
+                                            <p class="text-xs text-rose-400 font-semibold">Downtime: 1j 30m</p>
+                                            <p class="text-[10px] text-slate-500">Teknisi: Joko Susilo</p>
                                         </div>
-                                        <div class="w-full bg-industrial-200 rounded-full h-2.5">
-                                            <div class="bg-brand-600 h-2.5 rounded-full" style="width: 91.5%"></div>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div class="flex justify-between font-semibold mb-1">
-                                            <span>Zero Repeated Failure (Kerusakan Berulang)</span>
-                                            <span class="text-amber-600">Target: < 2% | Realisasi: 1.4%</span>
-                                        </div>
-                                        <div class="w-full bg-industrial-200 rounded-full h-2.5">
-                                            <div class="bg-amber-500 h-2.5 rounded-full" style="width: 25%"></div>
-                                        </div>
-                                    </div>
-                                    <div class="flex justify-between items-center bg-white p-3 rounded-lg border border-industrial-200">
-                                        <span class="font-medium text-industrial-700">MTTR Rata-Rata</span>
-                                        <span class="px-2.5 py-1 bg-blue-100 text-blue-700 rounded font-bold text-[11px]">1.8 Jam (Target < 2 Jam)</span>
+                                        <button onclick="openRCAModal('BRK-2026-002')" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition">Analisis RCA</button>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <div id="tab-assets" class="tab-content space-y-6">
-                    <div class="bg-white p-5 rounded-xl border border-industrial-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div>
-                            <h3 class="text-base font-bold text-industrial-800"><i class="fa-solid fa-cubes text-brand-600 mr-2"></i>Direktori Asset & Equipment</h3>
-                            <p class="text-xs text-industrial-500">Pusat data mesin, panel listrik, pompa, HVAC, compressor, dan fasilitas industri.</p>
-                        </div>
-                        <button onclick="openModal('modal-add-asset')" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow transition flex items-center space-x-2">
-                            <i class="fa-solid fa-plus"></i>
-                            <span>Tambah Asset Baru</span>
-                        </button>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="asset-grid">
-                        <!-- Asset Card 1 -->
-                        <div class="bg-white p-4 rounded-xl border border-industrial-200 shadow-sm hover:border-brand-500 transition">
-                            <div class="flex justify-between items-start mb-2">
-                                <span class="bg-brand-100 text-brand-700 text-[10px] font-bold px-2 py-0.5 rounded">AST-MEC-001</span>
-                                <span class="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded">Normal</span>
+                        <!-- Recent Work Orders Table -->
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-bold text-white text-base">Work Order Terbaru</h3>
+                                <button onclick="switchTab('workOrder')" class="text-xs text-cyan-400 hover:underline">Lihat Semua →</button>
                             </div>
-                            <h4 class="font-bold text-sm text-industrial-800">Compressor Utama #01</h4>
-                            <p class="text-xs text-industrial-500 mt-1">Lokasi: Utility Room Plant 1</p>
-                            <div class="mt-3 pt-3 border-t border-industrial-100 flex justify-between items-center text-xs">
-                                <span class="text-industrial-500">Atlas Copco GA-75</span>
-                                <button onclick="openModal('modal-asset-detail')" class="text-brand-600 font-semibold hover:underline">Detail & QR</button>
-                            </div>
-                        </div>
-                        <!-- Asset Card 2 -->
-                        <div class="bg-white p-4 rounded-xl border border-industrial-200 shadow-sm hover:border-brand-500 transition">
-                            <div class="flex justify-between items-start mb-2">
-                                <span class="bg-brand-100 text-brand-700 text-[10px] font-bold px-2 py-0.5 rounded">AST-ELE-004</span>
-                                <span class="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded">Normal</span>
-                            </div>
-                            <h4 class="font-bold text-sm text-industrial-800">Panel LVMDP Utama</h4>
-                            <p class="text-xs text-industrial-500 mt-1">Lokasi: Main Electrical Room</p>
-                            <div class="mt-3 pt-3 border-t border-industrial-100 flex justify-between items-center text-xs">
-                                <span class="text-industrial-500">Schneider Masterpact</span>
-                                <button onclick="openModal('modal-asset-detail')" class="text-brand-600 font-semibold hover:underline">Detail & QR</button>
-                            </div>
-                        </div>
-                        <!-- Asset Card 3 -->
-                        <div class="bg-white p-4 rounded-xl border border-industrial-200 shadow-sm hover:border-brand-500 transition">
-                            <div class="flex justify-between items-start mb-2">
-                                <span class="bg-brand-100 text-brand-700 text-[10px] font-bold px-2 py-0.5 rounded">AST-AUT-012</span>
-                                <span class="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded">Attention</span>
-                            </div>
-                            <h4 class="font-bold text-sm text-industrial-800">Forklift Toyota 3Ton</h4>
-                            <p class="text-xs text-industrial-500 mt-1">Lokasi: Gudang Finished Goods</p>
-                            <div class="mt-3 pt-3 border-t border-industrial-100 flex justify-between items-center text-xs">
-                                <span class="text-industrial-500">Diesel 3000 Hours</span>
-                                <button onclick="openModal('modal-asset-detail')" class="text-brand-600 font-semibold hover:underline">Detail & QR</button>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="bg-slate-950 text-slate-400 uppercase">
+                                        <tr>
+                                            <th class="p-3 rounded-l-lg">No WO</th>
+                                            <th class="p-3">Equipment</th>
+                                            <th class="p-3">Jenis Pekerjaan</th>
+                                            <th class="p-3">Teknisi</th>
+                                            <th class="p-3">Status</th>
+                                            <th class="p-3 rounded-r-lg text-right">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-800">
+                                        <tr>
+                                            <td class="p-3 font-semibold text-cyan-400">WO-2026-101</td>
+                                            <td class="p-3 font-medium">Kompresor Screw #1</td>
+                                            <td class="p-3">Preventive 500 Hours</td>
+                                            <td class="p-3">Ahmad Fauzi</td>
+                                            <td class="p-3"><span class="bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded-full font-semibold">Completed</span></td>
+                                            <td class="p-3 text-right"><button onclick="viewWODetail('WO-2026-101')" class="text-slate-300 hover:text-white bg-slate-800 px-2.5 py-1 rounded">Detail</button></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="p-3 font-semibold text-cyan-400">WO-2026-102</td>
+                                            <td class="p-3 font-medium">Conveyor Line A</td>
+                                            <td class="p-3">Corrective (Bearing Aus)</td>
+                                            <td class="p-3">Joko Susilo</td>
+                                            <td class="p-3"><span class="bg-blue-950 text-blue-400 border border-blue-800 px-2 py-0.5 rounded-full font-semibold">In Progress</span></td>
+                                            <td class="p-3 text-right"><button onclick="viewWODetail('WO-2026-102')" class="text-slate-300 hover:text-white bg-slate-800 px-2.5 py-1 rounded">Detail</button></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="p-3 font-semibold text-cyan-400">WO-2026-103</td>
+                                            <td class="p-3 font-medium">Genset Perkins 500kVA</td>
+                                            <td class="p-3">Preventive Bulanan</td>
+                                            <td class="p-3">Budi Santoso</td>
+                                            <td class="p-3"><span class="bg-amber-950 text-amber-400 border border-amber-800 px-2 py-0.5 rounded-full font-semibold">Assigned</span></td>
+                                            <td class="p-3 text-right"><button onclick="viewWODetail('WO-2026-103')" class="text-slate-300 hover:text-white bg-slate-800 px-2.5 py-1 rounded">Detail</button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div id="tab-mechanical" class="tab-content space-y-6">
-                    <div class="bg-white p-5 rounded-xl border border-industrial-200 shadow-sm">
-                        <h3 class="text-base font-bold text-industrial-800 mb-1"><i class="fa-solid fa-screwdriver-wrench text-brand-600 mr-2"></i>Mechanical Maintenance</h3>
-                        <p class="text-xs text-industrial-500 mb-4">Pengelolaan Engine, Pompa, Kompresor, Gearbox, Bearing, Belt, Chain, dan Alignment.</p>
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                            <div class="p-3 bg-industrial-50 rounded-lg border border-industrial-200 font-semibold text-industrial-700">⚙️ Pompa & Impeller</div>
-                            <div class="p-3 bg-industrial-50 rounded-lg border border-industrial-200 font-semibold text-industrial-700">🔧 Gearbox & Bearing</div>
-                            <div class="p-3 bg-industrial-50 rounded-lg border border-industrial-200 font-semibold text-industrial-700">🔩 Belt & Coupling</div>
-                            <div class="p-3 bg-industrial-50 rounded-lg border border-industrial-200 font-semibold text-industrial-700">🔥 Welding & Overhaul</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="tab-electrical" class="tab-content space-y-6">
-                    <div class="bg-white p-5 rounded-xl border border-industrial-200 shadow-sm">
-                        <h3 class="text-base font-bold text-industrial-800 mb-1"><i class="fa-solid fa-bolt text-brand-600 mr-2"></i>Electrical Maintenance & Panel</h3>
-                        <p class="text-xs text-industrial-500 mb-4">Monitoring LVMDP, SDP, MCC, Transformer, Genset, Capacitor Bank, Grounding, & Insulation.</p>
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                            <div class="p-3 bg-industrial-50 rounded-lg border border-industrial-200 font-semibold text-industrial-700">⚡ LVMDP & ACB/MCCB</div>
-                            <div class="p-3 bg-industrial-50 rounded-lg border border-industrial-200 font-semibold text-industrial-700">🔋 Transformer & UPS</div>
-                            <div class="p-3 bg-industrial-50 rounded-lg border border-industrial-200 font-semibold text-industrial-700">🔌 Grounding & Lightning</div>
-                            <div class="p-3 bg-industrial-50 rounded-lg border border-industrial-200 font-semibold text-industrial-700">📊 Power Meter & kWh</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="tab-automotive" class="tab-content space-y-6">
-                    <div class="bg-white p-5 rounded-xl border border-industrial-200 shadow-sm">
-                        <h3 class="text-base font-bold text-industrial-800 mb-1"><i class="fa-solid fa-truck-front text-brand-600 mr-2"></i>Automotive & Fleet Management</h3>
-                        <p class="text-xs text-industrial-500 mb-4">Pengelolaan Kendaraan Operasional, Truk, Forklift, dan Alat Berat.</p>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left text-xs">
-                                <thead class="bg-industrial-100 text-industrial-700 uppercase font-semibold">
-                                    <tr>
-                                        <th class="px-4 py-3">No. Kendaraan</th>
-                                        <th class="px-4 py-3">Jenis / Merk</th>
-                                        <th class="px-4 py-3">Driver</th>
-                                        <th class="px-4 py-3">Kilometer / HM</th>
-                                        <th class="px-4 py-3">Kondisi</th>
-                                        <th class="px-4 py-3">Jadwal Service Berikutnya</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-industrial-200">
-                                    <tr>
-                                        <td class="px-4 py-3 font-bold text-brand-600">B 9128 U</td>
-                                        <td class="px-4 py-3">Forklift Toyota 3Ton</td>
-                                        <td class="px-4 py-3">Sugiarto</td>
-                                        <td class="px-4 py-3">2,850 HM</td>
-                                        <td class="px-4 py-3"><span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-semibold text-[10px]">Baik</span></td>
-                                        <td class="px-4 py-3">15 Okt 2026</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="px-4 py-3 font-bold text-brand-600">B 8821 XA</td>
-                                        <td class="px-4 py-3">Truck Box Isuzu Elf</td>
-                                        <td class="px-4 py-3">Asep Saepudin</td>
-                                        <td class="px-4 py-3">45,200 KM</td>
-                                        <td class="px-4 py-3"><span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-semibold text-[10px]">Baik</span></td>
-                                        <td class="px-4 py-3">20 Okt 2026</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="tab-preventive" class="tab-content space-y-6">
-                    <div class="bg-white p-5 rounded-xl border border-industrial-200 shadow-sm flex justify-between items-center">
-                        <div>
-                            <h3 class="text-base font-bold text-industrial-800"><i class="fa-solid fa-calendar-check text-brand-600 mr-2"></i>Preventive Maintenance (PM Schedule)</h3>
-                            <p class="text-xs text-industrial-500">Jadwal perawatan rutin harian, mingguan, bulanan, tahunan, dan running hours.</p>
-                        </div>
-                        <button onclick="openModal('modal-pm')" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow transition">
-                            <i class="fa-solid fa-plus mr-1"></i> Buat PM Baru
-                        </button>
-                    </div>
-                    <!-- PM List Table -->
-                    <div class="bg-white rounded-xl border border-industrial-200 shadow-sm overflow-hidden">
-                        <table class="w-full text-left text-xs">
-                            <thead class="bg-industrial-100 text-industrial-700 uppercase font-semibold">
-                                <tr>
-                                    <th class="px-4 py-3">No. PM</th>
-                                    <th class="px-4 py-3">Equipment</th>
-                                    <th class="px-4 py-3">Frekuensi</th>
-                                    <th class="px-4 py-3">Jadwal</th>
-                                    <th class="px-4 py-3">Teknisi</th>
-                                    <th class="px-4 py-3">Status</th>
-                                    <th class="px-4 py-3 text-right">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-industrial-200">
-                                <tr>
-                                    <td class="px-4 py-3 font-semibold text-brand-600">PM-2026-0301</td>
-                                    <td class="px-4 py-3">Compressor Utama #01</td>
-                                    <td class="px-4 py-3">Bulanan (Monthly)</td>
-                                    <td class="px-4 py-3">10 Oktober 2026</td>
-                                    <td class="px-4 py-3">Budi Santoso</td>
-                                    <td class="px-4 py-3"><span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold text-[10px]">Scheduled</span></td>
-                                    <td class="px-4 py-3 text-right">
-                                        <button onclick="openModal('modal-pm-detail')" class="text-brand-600 hover:underline font-semibold">Proses / Checklist</button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="px-4 py-3 font-semibold text-brand-600">PM-2026-0302</td>
-                                    <td class="px-4 py-3">Panel LVMDP Utama</td>
-                                    <td class="px-4 py-3">3 Bulanan</td>
-                                    <td class="px-4 py-3">12 Oktober 2026</td>
-                                    <td class="px-4 py-3">Ahmad Fauzi</td>
-                                    <td class="px-4 py-3"><span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-semibold text-[10px]">In Progress</span></td>
-                                    <td class="px-4 py-3 text-right">
-                                        <button onclick="openModal('modal-pm-detail')" class="text-brand-600 hover:underline font-semibold">Proses / Checklist</button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div id="tab-corrective" class="tab-content space-y-6">
-                    <div class="bg-white p-5 rounded-xl border border-industrial-200 shadow-sm flex justify-between items-center">
-                        <div>
-                            <h3 class="text-base font-bold text-industrial-800"><i class="fa-solid fa-wrench text-brand-600 mr-2"></i>Corrective Maintenance & Perbaikan</h3>
-                            <p class="text-xs text-industrial-500">Pencatatan laporan kerusakan, analisa akar masalah, dan tindakan perbaikan.</p>
-                        </div>
-                        <button onclick="openModal('modal-breakdown')" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow transition">
-                            <i class="fa-solid fa-plus mr-1"></i> Lapor Kerusakan
-                        </button>
-                    </div>
-                    <div class="bg-white rounded-xl border border-industrial-200 shadow-sm p-4 text-xs text-industrial-600">
-                        Alur Perbaikan: Laporan Kerusakan → Pemeriksaan → Analisa → Planning → Perbaikan → Testing → Verification → Closed. (Semua data tercatat otomatis dengan foto sebelum dan sesudah perbaikan).
-                    </div>
-                </div>
-
-                <div id="tab-breakdown" class="tab-content space-y-6">
-                    <div class="bg-red-50 border border-red-200 p-5 rounded-xl shadow-sm">
-                        <div class="flex items-center space-x-3 mb-3">
-                            <div class="bg-red-600 text-white p-2 rounded-lg"><i class="fa-solid fa-triangle-exclamation text-xl"></i></div>
-                            <div>
-                                <h3 class="text-base font-bold text-red-800">Critical Breakdown & Emergency Response</h3>
-                                <p class="text-xs text-red-600">Sistem darurat untuk penanganan mesin mati atau fasilitas critical yang berhenti beroperasi.</p>
-                            </div>
-                        </div>
-                        <div class="bg-white p-4 rounded-lg border border-red-200 mt-3 space-y-2">
-                            <div class="flex justify-between font-bold text-industrial-800 text-sm">
-                                <span>Compressor Utama #02 (Line 3)</span>
-                                <span class="text-red-600 bg-red-100 px-2 py-0.5 rounded text-xs">Downtime: 2 Jam 15 Menit</span>
-                            </div>
-                            <p class="text-xs text-industrial-600"><b>Kerusakan:</b> Kebocoran pada seal utama, tekanan drop dibawah 4 bar.</p>
-                            <p class="text-xs text-industrial-600"><b>Root Cause Analysis (RCA):</b> Keausan material seal akibat running hours melebihi 8,000 jam tanpa penggantian.</p>
-                            <p class="text-xs text-industrial-600"><b>Corrective Action:</b> Penggantian Gasket Seal Part #GS-882 oleh teknisi mekanik Budi Santoso.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="tab-workorder" class="tab-content space-y-6">
-                    <div class="bg-white p-5 rounded-xl border border-industrial-200 shadow-sm flex justify-between items-center">
-                        <div>
-                            <h3 class="text-base font-bold text-industrial-800"><i class="fa-solid fa-file-invoice text-brand-600 mr-2"></i>Work Order (WO) Management</h3>
-                            <p class="text-xs text-industrial-500">Pusat kontrol perintah kerja pemeliharaan dan perbaikan seluruh fasilitas.</p>
-                        </div>
-                        <button onclick="openModal('modal-wo')" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow transition">
-                            <i class="fa-solid fa-plus mr-1"></i> Buat WO Baru
-                        </button>
-                    </div>
-                    <!-- Detailed WO Table -->
-                    <div class="bg-white rounded-xl border border-industrial-200 shadow-sm overflow-hidden">
-                        <table class="w-full text-left text-xs">
-                            <thead class="bg-industrial-100 text-industrial-700 uppercase font-semibold">
-                                <tr>
-                                    <th class="px-4 py-3">WO Number</th>
-                                    <th class="px-4 py-3">Tanggal</th>
-                                    <th class="px-4 py-3">Equipment</th>
-                                    <th class="px-4 py-3">Jenis Pekerjaan</th>
-                                    <th class="px-4 py-3">Teknisi</th>
-                                    <th class="px-4 py-3">Status</th>
-                                    <th class="px-4 py-3 text-right">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-industrial-200">
-                                <tr>
-                                    <td class="px-4 py-3 font-semibold text-brand-600">WO-2026-0891</td>
-                                    <td class="px-4 py-3">05 Okt 2026</td>
-                                    <td class="px-4 py-3">Compressor Utama #02</td>
-                                    <td class="px-4 py-3">Corrective / Ganti Gasket Seal</td>
-                                    <td class="px-4 py-3">Budi Santoso</td>
-                                    <td class="px-4 py-3"><span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-semibold text-[10px]">In Progress</span></td>
-                                    <td class="px-4 py-3 text-right">
-                                        <button onclick="openModal('modal-wo-detail')" class="text-brand-600 font-semibold hover:underline">Detail</button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="px-4 py-3 font-semibold text-brand-600">WO-2026-0890</td>
-                                    <td class="px-4 py-3">04 Okt 2026</td>
-                                    <td class="px-4 py-3">Panel LVMDP Utama</td>
-                                    <td class="px-4 py-3">Preventive / Thermography Check</td>
-                                    <td class="px-4 py-3">Ahmad Fauzi</td>
-                                    <td class="px-4 py-3"><span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold text-[10px]">Assigned</span></td>
-                                    <td class="px-4 py-3 text-right">
-                                        <button onclick="openModal('modal-wo-detail')" class="text-brand-600 font-semibold hover:underline">Detail</button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div id="tab-inspection" class="tab-content space-y-6">
-                    <div class="bg-white p-5 rounded-xl border border-industrial-200 shadow-sm flex justify-between items-center">
-                        <div>
-                            <h3 class="text-base font-bold text-industrial-800"><i class="fa-solid fa-clipboard-check text-brand-600 mr-2"></i>Checklist & Inspeksi Digital</h3>
-                            <p class="text-xs text-industrial-500">Checklist harian mesin, panel, genset, dan forklift dengan opsi OK, Attention, NG.</p>
-                        </div>
-                        <button onclick="openModal('modal-inspection')" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow transition">
-                            <i class="fa-solid fa-plus mr-1"></i> Buat Inspeksi Baru
-                        </button>
-                    </div>
-                    <div class="bg-white p-5 rounded-xl border border-industrial-200 shadow-sm space-y-4">
-                        <h4 class="font-bold text-sm text-industrial-800">Form Checklist Digital: Compressor Utama #01</h4>
-                        <div class="space-y-2 text-xs">
-                            <div class="flex items-center justify-between p-3 bg-industrial-50 rounded-lg border">
-                                <span>1. Level Oli Pelumas & Temperatur Normal</span>
-                                <div class="space-x-2">
-                                    <label class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded font-bold cursor-pointer"><input type="radio" name="chk1" checked> OK</label>
-                                    <label class="px-2 py-1 bg-amber-100 text-amber-700 rounded font-bold cursor-pointer"><input type="radio" name="chk1"> Attention</label>
-                                    <label class="px-2 py-1 bg-red-100 text-red-700 rounded font-bold cursor-pointer"><input type="radio" name="chk1"> NG</label>
+                    <!-- Right: Sasaran Mutu Quick Widget & Calendar -->
+                    <div class="space-y-6">
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                            <h3 class="font-bold text-white text-base mb-3 flex items-center justify-between">
+                                <span>Target Sasaran Mutu</span>
+                                <i class="fa-solid fa-bullseye text-cyan-400"></i>
+                            </h3>
+                            <div class="space-y-4 text-xs">
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-slate-300">PM Compliance</span>
+                                        <span class="font-bold text-emerald-400">96% (Target: 95%)</span>
+                                    </div>
+                                    <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                        <div class="bg-emerald-500 h-full rounded-full" style="width: 96%"></div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="flex items-center justify-between p-3 bg-industrial-50 rounded-lg border">
-                                <span>2. Tekanan Discharge & Suction (Bar)</span>
-                                <input type="text" value="7.5 Bar" class="px-3 py-1 border rounded text-xs w-28 bg-white">
-                            </div>
-                            <div class="flex items-center justify-between p-3 bg-industrial-50 rounded-lg border">
-                                <span>3. Kebocoran Udara / Oil Leak</span>
-                                <div class="space-x-2">
-                                    <label class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded font-bold cursor-pointer"><input type="radio" name="chk2" checked> OK</label>
-                                    <label class="px-2 py-1 bg-amber-100 text-amber-700 rounded font-bold cursor-pointer"><input type="radio" name="chk2"> Attention</label>
-                                    <label class="px-2 py-1 bg-red-100 text-red-700 rounded font-bold cursor-pointer"><input type="radio" name="chk2"> NG</label>
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-slate-300">Equipment Availability</span>
+                                        <span class="font-bold text-cyan-400">98.2% (Target: 98%)</span>
+                                    </div>
+                                    <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                        <div class="bg-cyan-500 h-full rounded-full" style="width: 98.2%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-slate-300">Work Order Tepat Waktu</span>
+                                        <span class="font-bold text-blue-400">92% (Target: 90%)</span>
+                                    </div>
+                                    <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                        <div class="bg-blue-500 h-full rounded-full" style="width: 92%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-slate-300">Repeated Failure Rate</span>
+                                        <span class="font-bold text-amber-400">1.5% (Target: < 2%)</span>
+                                    </div>
+                                    <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                        <div class="bg-amber-500 h-full rounded-full" style="width: 15%"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <button onclick="alertBox('Checklist inspeksi berhasil disimpan! Jika ditemukan NG otomatis dibuat Work Order.')" class="bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs px-4 py-2 rounded-lg shadow">
-                            Simpan & Kirim Inspeksi
-                        </button>
-                    </div>
-                </div>
 
-                <div id="tab-planning" class="tab-content space-y-6">
-                    <div class="bg-white p-5 rounded-xl border border-industrial-200 shadow-sm">
-                        <h3 class="text-base font-bold text-industrial-800 mb-1"><i class="fa-solid fa-calendar-days text-brand-600 mr-2"></i>Planning & Weekly/Monthly Schedule</h3>
-                        <p class="text-xs text-industrial-500 mb-4">Kalender perencanaan maintenance fasilitas dan alokasi teknisi.</p>
-                        <div class="grid grid-cols-1 md:grid-cols-7 gap-2 text-center text-xs">
-                            <div class="bg-industrial-100 p-2 font-bold rounded">Senin (5)</div>
-                            <div class="bg-brand-50 border border-brand-200 p-2 rounded">
-                                <p class="font-bold text-brand-700">PM Compressor</p>
-                                <p class="text-[10px] text-industrial-500">Teknisi: Budi</p>
+                        <!-- Maintenance Quick Calendar Widget -->
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                            <div class="flex justify-between items-center mb-3">
+                                <h3 class="font-bold text-white text-base">Jadwal Hari Ini</h3>
+                                <span class="text-xs text-slate-400">05 Oktober 2026</span>
                             </div>
-                            <div class="bg-industrial-100 p-2 font-bold rounded">Selasa (6)</div>
-                            <div class="bg-amber-50 border border-amber-200 p-2 rounded">
-                                <p class="font-bold text-amber-700">Service Forklift</p>
-                                <p class="text-[10px] text-industrial-500">Teknisi: Joko</p>
-                            </div>
-                            <div class="bg-industrial-100 p-2 font-bold rounded">Rabu (7)</div>
-                            <div class="bg-industrial-100 p-2 font-bold rounded">Kamis (8)</div>
-                            <div class="bg-industrial-100 p-2 font-bold rounded">Jumat (9)</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="tab-inventory" class="tab-content space-y-6">
-                    <div class="bg-white p-5 rounded-xl border border-industrial-200 shadow-sm flex justify-between items-center">
-                        <div>
-                            <h3 class="text-base font-bold text-industrial-800"><i class="fa-solid fa-boxes-stacked text-brand-600 mr-2"></i>Spare Part, Material & Inventory</h3>
-                            <p class="text-xs text-industrial-500">Pusat stok spare part, minimum limit, part number, dan supplier.</p>
-                        </div>
-                        <button onclick="openModal('modal-sparepart')" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow transition">
-                            <i class="fa-solid fa-plus mr-1"></i> Tambah Part Baru
-                        </button>
-                    </div>
-                    <div class="bg-white rounded-xl border border-industrial-200 shadow-sm overflow-hidden">
-                        <table class="w-full text-left text-xs">
-                            <thead class="bg-industrial-100 text-industrial-700 uppercase font-semibold">
-                                <tr>
-                                    <th class="px-4 py-3">Part Number</th>
-                                    <th class="px-4 py-3">Nama Spare Part</th>
-                                    <th class="px-4 py-3">Kategori</th>
-                                    <th class="px-4 py-3">Stok</th>
-                                    <th class="px-4 py-3">Min Stock</th>
-                                    <th class="px-4 py-3">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-industrial-200">
-                                <tr>
-                                    <td class="px-4 py-3 font-semibold text-brand-600">PART-GS-882</td>
-                                    <td class="px-4 py-3">Gasket Seal Atlas Copco</td>
-                                    <td class="px-4 py-3">Mechanical</td>
-                                    <td class="px-4 py-3 font-bold text-red-600">1 pcs</td>
-                                    <td class="px-4 py-3">3 pcs</td>
-                                    <td class="px-4 py-3"><span class="bg-red-100 text-red-700 px-2 py-0.5 rounded font-bold text-[10px]">LOW STOCK</span></td>
-                                </tr>
-                                <tr>
-                                    <td class="px-4 py-3 font-semibold text-brand-600">PART-OL-10W40</td>
-                                    <td class="px-4 py-3">Oli Diesel Synthetic 20L</td>
-                                    <td class="px-4 py-3">Lubricant</td>
-                                    <td class="px-4 py-3 font-bold text-emerald-600">14 Drum</td>
-                                    <td class="px-4 py-3">5 Drum</td>
-                                    <td class="px-4 py-3"><span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold text-[10px]">Normal</span></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div id="tab-documents" class="tab-content space-y-6">
-                    <div class="bg-white p-5 rounded-xl border border-industrial-200 shadow-sm">
-                        <h3 class="text-base font-bold text-industrial-800 mb-1"><i class="fa-solid fa-folder-open text-brand-600 mr-2"></i>Dokumentasi & Asset QR Code</h3>
-                        <p class="text-xs text-industrial-500 mb-4">Manual book, drawing, datasheet, laporan inspeksi, dan QR Code pemindaian lapangan.</p>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div class="p-4 bg-industrial-50 rounded-xl border border-industrial-200 text-center space-y-2">
-                                <div class="bg-white p-3 inline-block rounded-lg shadow-sm border">
-                                    <i class="fa-solid fa-qrcode text-4xl text-brand-600"></i>
+                            <div class="space-y-2 text-xs">
+                                <div class="bg-slate-950 p-2.5 rounded-xl border-l-4 border-emerald-500">
+                                    <p class="font-semibold text-white">PM Bulanan AC Central #3</p>
+                                    <p class="text-[11px] text-slate-400">08:00 - 10:00 | Teknisi: Ahmad F.</p>
                                 </div>
-                                <h4 class="font-bold text-xs text-industrial-800">QR Code: Compressor #01</h4>
-                                <button onclick="alertBox('Scan QR berhasil! Menampilkan profil asset, riwayat PM & WO.')" class="bg-brand-600 text-white text-[11px] px-3 py-1.5 rounded font-medium shadow w-full">Simulasi Scan QR</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="tab-analytics" class="tab-content space-y-6">
-                    <div class="bg-white p-5 rounded-xl border border-industrial-200 shadow-sm">
-                        <h3 class="text-base font-bold text-industrial-800 mb-1"><i class="fa-solid fa-chart-line text-brand-600 mr-2"></i>Analytics, MTBF & MTTR Performance</h3>
-                        <p class="text-xs text-industrial-500 mb-4">Analisis keandalan mesin, tingkat kegagalan, dan efektivitas biaya pemeliharaan.</p>
-                        <div class="h-72 relative">
-                            <canvas id="analyticsChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="tab-reports" class="tab-content space-y-6">
-                    <div class="bg-white p-5 rounded-xl border border-industrial-200 shadow-sm space-y-4">
-                        <h3 class="text-base font-bold text-industrial-800"><i class="fa-solid fa-file-excel text-brand-600 mr-2"></i>Pusat Laporan & Ekspor Data (CSV, Excel, PDF)</h3>
-                        <p class="text-xs text-industrial-500">Unduh laporan harian, mingguan, bulanan, preventive maintenance, breakdown, dan sasaran mutu.</p>
-                        
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div class="p-4 bg-industrial-50 rounded-xl border border-industrial-200 space-y-3">
-                                <h4 class="font-bold text-xs text-industrial-800">Laporan Work Order & Maintenance</h4>
-                                <div class="flex space-x-2">
-                                    <button onclick="exportExcel()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs py-2 rounded font-semibold shadow flex items-center justify-center space-x-1">
-                                        <i class="fa-solid fa-file-excel"></i><span>Excel</span>
-                                    </button>
-                                    <button onclick="exportPDF()" class="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs py-2 rounded font-semibold shadow flex items-center justify-center space-x-1">
-                                        <i class="fa-solid fa-file-pdf"></i><span>PDF</span>
-                                    </button>
+                                <div class="bg-slate-950 p-2.5 rounded-xl border-l-4 border-amber-500">
+                                    <p class="font-semibold text-white">Inspeksi Panel SDP-02</p>
+                                    <p class="text-[11px] text-slate-400">13:30 - 15:00 | Teknisi: Budi S.</p>
                                 </div>
-                            </div>
-                            <div class="p-4 bg-industrial-50 rounded-xl border border-industrial-200 space-y-3">
-                                <h4 class="font-bold text-xs text-industrial-800">Laporan Sasaran Mutu (KPI)</h4>
-                                <div class="flex space-x-2">
-                                    <button onclick="exportExcel()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs py-2 rounded font-semibold shadow flex items-center justify-center space-x-1">
-                                        <i class="fa-solid fa-file-excel"></i><span>Excel</span>
-                                    </button>
-                                    <button onclick="exportPDF()" class="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs py-2 rounded font-semibold shadow flex items-center justify-center space-x-1">
-                                        <i class="fa-solid fa-file-pdf"></i><span>PDF</span>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="p-4 bg-industrial-50 rounded-xl border border-industrial-200 space-y-3">
-                                <h4 class="font-bold text-xs text-industrial-800">Laporan Spare Part Inventory</h4>
-                                <div class="flex space-x-2">
-                                    <button onclick="exportExcel()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs py-2 rounded font-semibold shadow flex items-center justify-center space-x-1">
-                                        <i class="fa-solid fa-file-excel"></i><span>Excel</span>
-                                    </button>
-                                    <button onclick="exportPDF()" class="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs py-2 rounded font-semibold shadow flex items-center justify-center space-x-1">
-                                        <i class="fa-solid fa-file-pdf"></i><span>PDF</span>
-                                    </button>
+                                <div class="bg-slate-950 p-2.5 rounded-xl border-l-4 border-blue-500">
+                                    <p class="font-semibold text-white">Overhaul Valve Main Line</p>
+                                    <p class="text-[11px] text-slate-400">15:30 - 17:00 | Teknisi: Joko S.</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
             </div>
+
+            <!-- TAB 2: SASARAN MUTU -->
+            <div id="tab-sasaranMutu" class="tab-content space-y-6">
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Dashboard Sasaran Mutu (Quality Objective)</h2>
+                        <p class="text-xs text-slate-400">Monitoring pencapaian KPI perawatan dan perbaikan perusahaan secara komprehensif.</p>
+                    </div>
+                    <button onclick="exportReport('SasaranMutu')" class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-4 py-2 rounded-xl border border-slate-700 transition flex items-center space-x-2">
+                        <i class="fa-solid fa-file-excel text-emerald-400"></i><span>Export Laporan Mutu</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Perawatan Section -->
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl space-y-4">
+                        <div class="flex items-center space-x-2 border-b border-slate-800 pb-3">
+                            <i class="fa-solid fa-shield-halved text-emerald-400 text-lg"></i>
+                            <h3 class="font-bold text-white text-base">PERAWATAN (PREVENTIVE & RELIABILITY)</h3>
+                        </div>
+                        <div class="space-y-3 text-xs">
+                            <div class="bg-slate-950 p-3.5 rounded-xl flex justify-between items-center">
+                                <div>
+                                    <p class="font-semibold text-slate-200 text-sm">Preventive Maintenance Schedule Compliance</p>
+                                    <p class="text-[11px] text-slate-400">Target: 100 Pekerjaan | Realisasi: 96 Pekerjaan</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-sm font-bold text-emerald-400">96.0%</span>
+                                    <p><span class="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] px-2 py-0.5 rounded">GOOD</span></p>
+                                </div>
+                            </div>
+                            <div class="bg-slate-950 p-3.5 rounded-xl flex justify-between items-center">
+                                <div>
+                                    <p class="font-semibold text-slate-200 text-sm">Equipment Availability</p>
+                                    <p class="text-[11px] text-slate-400">Target: > 98.0% | Realisasi: Total Operasional</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-sm font-bold text-cyan-400">98.5%</span>
+                                    <p><span class="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] px-2 py-0.5 rounded">ACHIEVED</span></p>
+                                </div>
+                            </div>
+                            <div class="bg-slate-950 p-3.5 rounded-xl flex justify-between items-center">
+                                <div>
+                                    <p class="font-semibold text-slate-200 text-sm">Inspeksi Rutin Bulanan</p>
+                                    <p class="text-[11px] text-slate-400">Target: 450 Titik | Realisasi: 442 Titik</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-sm font-bold text-blue-400">98.2%</span>
+                                    <p><span class="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] px-2 py-0.5 rounded">GOOD</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Perbaikan Section -->
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl space-y-4">
+                        <div class="flex items-center space-x-2 border-b border-slate-800 pb-3">
+                            <i class="fa-solid fa-wrench text-amber-400 text-lg"></i>
+                            <h3 class="font-bold text-white text-base">PERBAIKAN (CORRECTIVE & BREAKDOWN)</h3>
+                        </div>
+                        <div class="space-y-3 text-xs">
+                            <div class="bg-slate-950 p-3.5 rounded-xl flex justify-between items-center">
+                                <div>
+                                    <p class="font-semibold text-slate-200 text-sm">Mean Time To Repair (MTTR)</p>
+                                    <p class="text-[11px] text-slate-400">Target: < 2.0 Jam | Realisasi Rata-rata</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-sm font-bold text-emerald-400">1.4 Jam</span>
+                                    <p><span class="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] px-2 py-0.5 rounded">TARGET MET</span></p>
+                                </div>
+                            </div>
+                            <div class="bg-slate-950 p-3.5 rounded-xl flex justify-between items-center">
+                                <div>
+                                    <p class="font-semibold text-slate-200 text-sm">Repeated Failure (Kerusakan Berulang)</p>
+                                    <p class="text-[11px] text-slate-400">Target: < 2% | Realisasi Bulan Ini</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-sm font-bold text-amber-400">1.1%</span>
+                                    <p><span class="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] px-2 py-0.5 rounded">CONTROLLED</span></p>
+                                </div>
+                            </div>
+                            <div class="bg-slate-950 p-3.5 rounded-xl flex justify-between items-center">
+                                <div>
+                                    <p class="font-semibold text-slate-200 text-sm">Corrective Action Closed Rate</p>
+                                    <p class="text-[11px] text-slate-400">Target: 95% | Realisasi Selesai</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-sm font-bold text-cyan-400">97.5%</span>
+                                    <p><span class="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] px-2 py-0.5 rounded">EXCELLENT</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: PREVENTIVE MAINTENANCE -->
+            <div id="tab-preventive" class="tab-content space-y-6">
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Preventive Maintenance (PM) Management</h2>
+                        <p class="text-xs text-slate-400">Penjadwalan perawatan berkala (Harian, Mingguan, Bulanan, Running Hours, dll).</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="openModal('pmModal')" class="bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center space-x-2">
+                            <i class="fa-solid fa-plus"></i><span>Buat Jadwal PM</span>
+                        </button>
+                        <button onclick="exportReport('PM')" class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-4 py-2 rounded-xl border border-slate-700 transition">
+                            <i class="fa-solid fa-file-excel text-emerald-400 mr-2"></i>Export
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
+                    <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+                        <div class="flex items-center space-x-2">
+                            <input type="text" placeholder="Filter PM..." class="bg-slate-950 border border-slate-700 text-xs rounded-lg px-3 py-1.5 text-white">
+                        </div>
+                        <span class="text-xs text-slate-400">Menampilkan 1-5 dari 18 Jadwal PM Aktif</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-950 text-slate-400 uppercase">
+                                <tr>
+                                    <th class="p-3">No PM</th>
+                                    <th class="p-3">Equipment</th>
+                                    <th class="p-3">Jenis PM</th>
+                                    <th class="p-3">Jadwal / Due</th>
+                                    <th class="p-3">Teknisi</th>
+                                    <th class="p-3">Status</th>
+                                    <th class="p-3 text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800">
+                                <tr>
+                                    <td class="p-3 font-semibold text-cyan-400">PM-2026-050</td>
+                                    <td class="p-3">Kompresor Screw Utama #1</td>
+                                    <td class="p-3">Bulanan (500 Hours)</td>
+                                    <td class="p-3 text-emerald-400 font-medium">06 Okt 2026</td>
+                                    <td class="p-3">Ahmad Fauzi</td>
+                                    <td class="p-3"><span class="bg-emerald-950 text-emerald-400 border border-emerald-800 px-2.5 py-0.5 rounded-full font-semibold">Scheduled</span></td>
+                                    <td class="p-3 text-right"><button onclick="executePM('PM-2026-050')" class="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1 rounded font-semibold">Eksekusi</button></td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 font-semibold text-cyan-400">PM-2026-051</td>
+                                    <td class="p-3">Genset Perkins 500kVA</td>
+                                    <td class="p-3">3 Bulanan</td>
+                                    <td class="p-3 text-amber-400 font-medium">Hari Ini</td>
+                                    <td class="p-3">Budi Santoso</td>
+                                    <td class="p-3"><span class="bg-amber-950 text-amber-400 border border-amber-800 px-2.5 py-0.5 rounded-full font-semibold">In Progress</span></td>
+                                    <td class="p-3 text-right"><button onclick="executePM('PM-2026-051')" class="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1 rounded font-semibold">Eksekusi</button></td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 font-semibold text-cyan-400">PM-2026-052</td>
+                                    <td class="p-3">Panel LVMDP Utama</td>
+                                    <td class="p-3">6 Bulanan (Thermal Check)</td>
+                                    <td class="p-3 text-rose-400 font-medium">02 Okt 2026 (Overdue)</td>
+                                    <td class="p-3">Budi Santoso</td>
+                                    <td class="p-3"><span class="bg-rose-950 text-rose-400 border border-rose-800 px-2.5 py-0.5 rounded-full font-semibold">Overdue</span></td>
+                                    <td class="p-3 text-right"><button onclick="executePM('PM-2026-052')" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-1 rounded font-semibold">Tindak Lanjut</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: CORRECTIVE MAINTENANCE -->
+            <div id="tab-corrective" class="tab-content space-y-6">
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Corrective Maintenance (Perbaikan)</h2>
+                        <p class="text-xs text-slate-400">Penanganan dan pelaporan kerusakan mesin serta tindakan korektif.</p>
+                    </div>
+                    <button onclick="openModal('correctiveModal')" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center space-x-2">
+                        <i class="fa-solid fa-plus"></i><span>Buat Laporan Kerusakan</span>
+                    </button>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden p-5">
+                    <div class="space-y-4">
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="bg-amber-950 text-amber-400 border border-amber-800 text-xs px-2 py-0.5 rounded font-bold">COR-2026-012</span>
+                                    <h4 class="font-bold text-white">Conveyor Line A - Belt Slip</h4>
+                                </div>
+                                <p class="text-xs text-slate-400 mt-1">Gejala: Belt kendor dan berbunyi bising. Penyebab: Tensioner aus.</p>
+                                <p class="text-[11px] text-slate-500 mt-1">Teknisi: Joko Susilo | Spare Part: V-Belt B-120 (1 Pcs)</p>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <span class="bg-blue-950 text-blue-400 border border-blue-800 text-xs px-3 py-1 rounded-full font-semibold">Testing & Verifikasi</span>
+                                <button onclick="openModal('correctiveModal')" class="bg-slate-800 hover:bg-slate-700 text-white text-xs px-3 py-2 rounded-lg">Update</button>
+                            </div>
+                        </div>
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="bg-emerald-950 text-emerald-400 border border-emerald-800 text-xs px-2 py-0.5 rounded font-bold">COR-2026-011</span>
+                                    <h4 class="font-bold text-white">Chiller AC #2 - Water Leakage</h4>
+                                </div>
+                                <p class="text-xs text-slate-400 mt-1">Gejala: Tetesan air pada sambungan pipa evaporator. Penyebab: Seal kendor.</p>
+                                <p class="text-[11px] text-slate-500 mt-1">Teknisi: Ahmad Fauzi | Spare Part: O-Ring Seal 2 inch</p>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <span class="bg-emerald-950 text-emerald-400 border border-emerald-800 text-xs px-3 py-1 rounded-full font-semibold">Closed & Verified</span>
+                                <button onclick="openModal('correctiveModal')" class="bg-slate-800 hover:bg-slate-700 text-white text-xs px-3 py-2 rounded-lg">Detail</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: BREAKDOWN & RCA -->
+            <div id="tab-breakdown" class="tab-content space-y-6">
+                <div class="bg-slate-900 border border-rose-900/50 p-5 rounded-2xl shadow-xl flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-rose-500">Critical Breakdown & Root Cause Analysis (RCA)</h2>
+                        <p class="text-xs text-slate-400">Manajemen gangguan darurat dan investigasi pencegahan agar kerusakan tidak berulang.</p>
+                    </div>
+                    <button onclick="openModal('breakdownModal')" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition">
+                        <i class="fa-solid fa-triangle-exclamation mr-2"></i>Catat Breakdown Baru
+                    </button>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+                    <h3 class="font-bold text-white text-base">Lembar Investigasi RCA (Root Cause Analysis)</h3>
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                        <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                            <span class="text-xs font-bold text-rose-400">BRK-2026-001 : LVMDP Panel Utama #1</span>
+                            <span class="text-xs text-slate-400">Waktu Kejadian: 05 Okt 2026 - 11:00 WIB</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                            <div class="bg-slate-900 p-3 rounded-lg">
+                                <p class="font-semibold text-cyan-400 mb-1">1. Problem Definition</p>
+                                <p class="text-slate-300">MCCB utama trip secara tiba-tiba saat beban puncak pabrik mencapai 85%.</p>
+                            </div>
+                            <div class="bg-slate-900 p-3 rounded-lg">
+                                <p class="font-semibold text-amber-400 mb-1">2. Root Cause (Analisis 5 Why)</p>
+                                <p class="text-slate-300">Koneksi terminal main busbar longgar sehingga menimbulkan hot spot dan thermal overload pada relay.</p>
+                            </div>
+                            <div class="bg-slate-900 p-3 rounded-lg">
+                                <p class="font-semibold text-emerald-400 mb-1">3. Corrective Action</p>
+                                <p class="text-slate-300">Pembersihan terminal, pengencangan dengan torque wrench standar, dan penambahan penjadwalan thermal scan bulanan.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 6: WORK ORDER -->
+            <div id="tab-workOrder" class="tab-content space-y-6">
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Work Order Management (WO)</h2>
+                        <p class="text-xs text-slate-400">Sistem perintah kerja profesional dari permintaan hingga verifikasi final.</p>
+                    </div>
+                    <button onclick="openModal('woModal')" class="bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center space-x-2">
+                        <i class="fa-solid fa-plus"></i><span>Buat Work Order Baru</span>
+                    </button>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden p-5">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-950 text-slate-400 uppercase">
+                                <tr>
+                                    <th class="p-3">No WO</th>
+                                    <th class="p-3">Tanggal</th>
+                                    <th class="p-3">Equipment</th>
+                                    <th class="p-3">Jenis Pekerjaan</th>
+                                    <th class="p-3">Prioritas</th>
+                                    <th class="p-3">Teknisi</th>
+                                    <th class="p-3">Status</th>
+                                    <th class="p-3 text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800">
+                                <tr>
+                                    <td class="p-3 font-semibold text-cyan-400">WO-2026-101</td>
+                                    <td class="p-3 text-slate-400">05 Okt 2026</td>
+                                    <td class="p-3">Kompresor Screw #1</td>
+                                    <td class="p-3">Preventive 500H</td>
+                                    <td class="p-3"><span class="text-blue-400 font-semibold">Normal</span></td>
+                                    <td class="p-3">Ahmad Fauzi</td>
+                                    <td class="p-3"><span class="bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded-full font-semibold">Completed</span></td>
+                                    <td class="p-3 text-right"><button onclick="viewWODetail('WO-2026-101')" class="bg-slate-800 text-white px-2.5 py-1 rounded">Detail</button></td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 font-semibold text-cyan-400">WO-2026-102</td>
+                                    <td class="p-3 text-slate-400">05 Okt 2026</td>
+                                    <td class="p-3">Conveyor Line A</td>
+                                    <td class="p-3">Corrective Bearing</td>
+                                    <td class="p-3"><span class="text-amber-400 font-semibold">High</span></td>
+                                    <td class="p-3">Joko Susilo</td>
+                                    <td class="p-3"><span class="bg-blue-950 text-blue-400 border border-blue-800 px-2 py-0.5 rounded-full font-semibold">In Progress</span></td>
+                                    <td class="p-3 text-right"><button onclick="viewWODetail('WO-2026-102')" class="bg-slate-800 text-white px-2.5 py-1 rounded">Detail</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 7: PLANNING & SCHEDULING -->
+            <div id="tab-planning" class="tab-content space-y-6">
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Planning & Scheduling (Kalender Maintenance)</h2>
+                        <p class="text-xs text-slate-400">Pengaturan jadwal mingguan, bulanan, dan alokasi teknisi.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition">
+                            <i class="fa-solid fa-calendar-days mr-2"></i>Tampilan Gantt
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-7 gap-3 text-xs">
+                        <!-- Simple Calendar Grid View for October 2026 -->
+                        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 md:col-span-2">
+                            <h3 class="font-bold text-white mb-2">Oktober 2026</h3>
+                            <div class="grid grid-cols-7 gap-1 text-center text-[10px] text-slate-400 font-bold mb-1">
+                                <span>Sn</span><span>Sl</span><span>Rb</span><span>Km</span><span>Jm</span><span>Sb</span><span>Mg</span>
+                            </div>
+                            <div class="grid grid-cols-7 gap-1 text-center text-xs">
+                                <span class="p-1 text-slate-600">28</span><span class="p-1 text-slate-600">29</span><span class="p-1 text-slate-600">30</span>
+                                <span class="p-1 text-white bg-slate-800 rounded">1</span><span class="p-1 text-white">2</span><span class="p-1 text-white">3</span><span class="p-1 text-white">4</span>
+                                <span class="p-1 text-white bg-cyan-600 rounded font-bold">5</span><span class="p-1 text-white">6</span><span class="p-1 text-white">7</span><span class="p-1 text-white">8</span><span class="p-1 text-white">9</span><span class="p-1 text-white">10</span><span class="p-1 text-white">11</span>
+                            </div>
+                        </div>
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 md:col-span-5 space-y-3">
+                            <h3 class="font-bold text-white">Alokasi Tugas Tanggal 05 Oktober 2026</h3>
+                            <div class="space-y-2">
+                                <div class="bg-slate-900 p-3 rounded-lg flex justify-between items-center">
+                                    <div>
+                                        <p class="font-semibold text-white">PM Kompresor Utama #1</p>
+                                        <p class="text-[11px] text-slate-400">Teknisi: Ahmad Fauzi | Durasi: 2 Jam</p>
+                                    </div>
+                                    <span class="bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded text-[10px]">Scheduled</span>
+                                </div>
+                                <div class="bg-slate-900 p-3 rounded-lg flex justify-between items-center">
+                                    <div>
+                                        <p class="font-semibold text-white">Perbaikan Conveyor Line A</p>
+                                        <p class="text-[11px] text-slate-400">Teknisi: Joko Susilo | Durasi: 3 Jam</p>
+                                    </div>
+                                    <span class="bg-blue-950 text-blue-400 px-2 py-0.5 rounded text-[10px]">In Progress</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 8: INSPECTION & CHECKLIST -->
+            <div id="tab-inspection" class="tab-content space-y-6">
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Inspection & Digital Checklist</h2>
+                        <p class="text-xs text-slate-400">Checklist harian mesin, panel, genset, dan kendaraan dengan trigger otomatis NG ke Work Order.</p>
+                    </div>
+                    <button onclick="openModal('inspectionModal')" class="bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center space-x-2">
+                        <i class="fa-solid fa-plus"></i><span>Buat Checklist Baru</span>
+                    </button>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-white text-sm">Checklist Harian Genset #1 (Operasional)</h3>
+                            <span class="bg-emerald-950 text-emerald-400 text-xs px-2.5 py-0.5 rounded font-bold">OK / Normal</span>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                            <div class="bg-slate-900 p-2.5 rounded border border-slate-800">
+                                <p class="text-slate-400">Level Oli Engine</p>
+                                <p class="font-bold text-emerald-400 mt-1">☑ OK (Normal)</p>
+                            </div>
+                            <div class="bg-slate-900 p-2.5 rounded border border-slate-800">
+                                <p class="text-slate-400">Radiator Coolant</p>
+                                <p class="font-bold text-emerald-400 mt-1">☑ OK (Normal)</p>
+                            </div>
+                            <div class="bg-slate-900 p-2.5 rounded border border-slate-800">
+                                <p class="text-slate-400">Aki / Battery Volt</p>
+                                <p class="font-bold text-emerald-400 mt-1">☑ OK (26.4 V)</p>
+                            </div>
+                            <div class="bg-slate-900 p-2.5 rounded border border-slate-800">
+                                <p class="text-slate-400">Indikator Panel</p>
+                                <p class="font-bold text-emerald-400 mt-1">☑ OK (Standby)</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 9: ASSET & EQUIPMENT -->
+            <div id="tab-assets" class="tab-content space-y-6">
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Asset & Equipment Register</h2>
+                        <p class="text-xs text-slate-400">Database lengkap mesin, panel, pompa, compressor, HVAC, dan workshop equipment.</p>
+                    </div>
+                    <button onclick="openModal('assetModal')" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center space-x-2">
+                        <i class="fa-solid fa-plus"></i><span>Tambah Asset</span>
+                    </button>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden p-5">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-950 text-slate-400 uppercase">
+                                <tr>
+                                    <th class="p-3">Asset ID</th>
+                                    <th class="p-3">Nama Equipment</th>
+                                    <th class="p-3">Kategori</th>
+                                    <th class="p-3">Lokasi</th>
+                                    <th class="p-3">Kondisi</th>
+                                    <th class="p-3 text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800">
+                                <tr>
+                                    <td class="p-3 font-semibold text-cyan-400">AST-MEC-001</td>
+                                    <td class="p-3 font-medium">Kompresor Screw Utama #1</td>
+                                    <td class="p-3">Mechanical</td>
+                                    <td class="p-3">Compressor Room</td>
+                                    <td class="p-3"><span class="bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded font-semibold">Prima</span></td>
+                                    <td class="p-3 text-right"><button onclick="viewAssetDetail('AST-MEC-001')" class="bg-slate-800 text-white px-2.5 py-1 rounded">Profile</button></td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 font-semibold text-cyan-400">AST-ELE-001</td>
+                                    <td class="p-3 font-medium">LVMDP Panel Utama #1</td>
+                                    <td class="p-3">Electrical</td>
+                                    <td class="p-3">Main Substation</td>
+                                    <td class="p-3"><span class="bg-rose-950 text-rose-400 border border-rose-800 px-2 py-0.5 rounded font-semibold">Breakdown</span></td>
+                                    <td class="p-3 text-right"><button onclick="viewAssetDetail('AST-ELE-001')" class="bg-slate-800 text-white px-2.5 py-1 rounded">Profile</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 10: MECHANICAL MODULE -->
+            <div id="tab-mechanical" class="tab-content space-y-6">
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Mechanical Maintenance Module</h2>
+                        <p class="text-xs text-slate-400">Pengelolaan engine, pump, compressor, gearbox, bearing, belt, dan alignment.</p>
+                    </div>
+                    <span class="bg-orange-950 text-orange-400 text-xs px-3 py-1 rounded-full border border-orange-800 font-bold">42 Equipment</span>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                    <p class="text-xs text-slate-400">Modul mekanikal aktif dengan checklist pelumasan, vibration analysis, dan alignment check.</p>
+                </div>
+            </div>
+
+            <!-- TAB 11: ELECTRICAL MODULE -->
+            <div id="tab-electrical" class="tab-content space-y-6">
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Electrical Maintenance Module</h2>
+                        <p class="text-xs text-slate-400">Pengelolaan LVMDP, MCCB, ACB, Transformer, Generator, dan Grounding.</p>
+                    </div>
+                    <span class="bg-yellow-950 text-yellow-400 text-xs px-3 py-1 rounded-full border border-yellow-800 font-bold">58 Equipment</span>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                    <p class="text-xs text-slate-400">Modul elektrikal aktif dengan parameter ukur Voltage, Current, Power Factor, dan Insulation Resistance.</p>
+                </div>
+            </div>
+
+            <!-- TAB 12: AUTOMOTIVE MODULE -->
+            <div id="tab-automotive" class="tab-content space-y-6">
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Automotive & Fleet Maintenance</h2>
+                        <p class="text-xs text-slate-400">Pengelolaan kendaraan operasional, forklift, truck, dan alat berat berdasarkan KM / Tanggal.</p>
+                    </div>
+                    <button onclick="openModal('assetModal')" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition">Tambah Kendaraan</button>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                    <p class="text-xs text-slate-400">Reminder servis berkala otomatis aktif berdasarkan odometer (KM) dan jadwal kalender.</p>
+                </div>
+            </div>
+
+            <!-- TAB 13: SPARE PART & WAREHOUSE -->
+            <div id="tab-inventory" class="tab-content space-y-6">
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Spare Part & Warehouse Inventory</h2>
+                        <p class="text-xs text-slate-400">Manajemen stock spare part, material, tools, dan alert low stock otomatis.</p>
+                    </div>
+                    <button onclick="openModal('sparepartModal')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition">Tambah Part</button>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden p-5">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-950 text-slate-400 uppercase">
+                                <tr>
+                                    <th class="p-3">Part Number</th>
+                                    <th class="p-3">Nama Spare Part</th>
+                                    <th class="p-3">Kategori</th>
+                                    <th class="p-3">Stock Sisa</th>
+                                    <th class="p-3">Min Stock</th>
+                                    <th class="p-3">Status</th>
+                                    <th class="p-3 text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800">
+                                <tr>
+                                    <td class="p-3 font-semibold text-cyan-400">BRG-6204</td>
+                                    <td class="p-3">Bearing Deep Groove 6204</td>
+                                    <td class="p-3">Mechanical</td>
+                                    <td class="p-3 text-rose-400 font-bold">2 Pcs</td>
+                                    <td class="p-3">5 Pcs</td>
+                                    <td class="p-3"><span class="bg-rose-950 text-rose-400 border border-rose-800 px-2.5 py-0.5 rounded-full font-bold">LOW STOCK</span></td>
+                                    <td class="p-3 text-right"><button class="bg-slate-800 text-white px-2.5 py-1 rounded">Restock</button></td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 font-semibold text-cyan-400">VBL-B120</td>
+                                    <td class="p-3">V-Belt B-120 Conveyor</td>
+                                    <td class="p-3">Mechanical</td>
+                                    <td class="p-3 text-emerald-400 font-bold">12 Pcs</td>
+                                    <td class="p-3">4 Pcs</td>
+                                    <td class="p-3"><span class="bg-emerald-950 text-emerald-400 border border-emerald-800 px-2.5 py-0.5 rounded-full font-semibold">Normal</span></td>
+                                    <td class="p-3 text-right"><button class="bg-slate-800 text-white px-2.5 py-1 rounded">Restock</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 14: ANALYTICS -->
+            <div id="tab-analytics" class="tab-content space-y-6">
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Analytics & Performance (MTBF / MTTR)</h2>
+                        <p class="text-xs text-slate-400">Grafik performa pemeliharaan, breakdown rate, dan biaya maintenance.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
+                        <h3 class="font-bold text-white text-sm mb-4">Grafik Preventive vs Corrective</h3>
+                        <div class="h-64 flex items-center justify-center bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-400">
+                            <canvas id="chartPrevCorr" class="w-full h-full"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
+                        <h3 class="font-bold text-white text-sm mb-4">Grafik Breakdown Bulanan (Jam)</h3>
+                        <div class="h-64 flex items-center justify-center bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-400">
+                            <canvas id="chartBreakdown" class="w-full h-full"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 15: REPORTS & EXPORT -->
+            <div id="tab-reports" class="tab-content space-y-6">
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Export & Reporting Center</h2>
+                        <p class="text-xs text-slate-400">Unduh laporan resmi maintenance ke format PDF, Excel, dan CSV.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl space-y-3">
+                        <div class="p-3 bg-rose-950 text-rose-400 w-fit rounded-xl"><i class="fa-solid fa-file-pdf text-xl"></i></div>
+                        <h3 class="font-bold text-white text-sm">Laporan Breakdown & RCA</h3>
+                        <p class="text-xs text-slate-400">Laporan lengkap gangguan kritis dan investigasi akar masalah.</p>
+                        <button onclick="exportReportPDF('Breakdown')" class="w-full bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold py-2.5 rounded-xl transition">Export ke PDF</button>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl space-y-3">
+                        <div class="p-3 bg-emerald-950 text-emerald-400 w-fit rounded-xl"><i class="fa-solid fa-file-excel text-xl"></i></div>
+                        <h3 class="font-bold text-white text-sm">Laporan Work Order & PM</h3>
+                        <p class="text-xs text-slate-400">Rekapitulasi seluruh pekerjaan preventive dan corrective.</p>
+                        <button onclick="exportReportExcel('WorkOrder')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 rounded-xl transition">Export ke Excel</button>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl space-y-3">
+                        <div class="p-3 bg-cyan-950 text-cyan-400 w-fit rounded-xl"><i class="fa-solid fa-file-csv text-xl"></i></div>
+                        <h3 class="font-bold text-white text-sm">Database Asset & Spare Part</h3>
+                        <p class="text-xs text-slate-400">Daftar seluruh equipment dan inventory warehouse.</p>
+                        <button onclick="exportReportCSV('Asset')" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold py-2.5 rounded-xl transition">Export ke CSV</button>
+                    </div>
+                </div>
+            </div>
+
         </main>
     </div>
 
-    <!-- Modal WO -->
-    <div id="modal-wo" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
-            <div class="flex justify-between items-center border-b pb-3">
-                <h3 class="font-bold text-base text-industrial-800">Buat Work Order Baru</h3>
-                <button onclick="closeModal('modal-wo')" class="text-industrial-400 hover:text-industrial-700"><i class="fa-solid fa-xmark text-lg"></i></button>
+    <!-- MODAL CONTAINER (Dynamic) -->
+    <!-- 1. Work Order Modal -->
+    <div id="woModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-base">Buat Work Order Baru</h3>
+                <button onclick="closeModal('woModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <div class="space-y-3 text-xs">
                 <div>
-                    <label class="font-semibold text-industrial-700 block mb-1">Equipment / Asset</label>
-                    <select class="w-full p-2 border rounded-lg bg-industrial-50">
-                        <option>Compressor Utama #01 (AST-MEC-001)</option>
-                        <option>Panel LVMDP Utama (AST-ELE-004)</option>
-                        <option>Forklift Toyota 3Ton (AST-AUT-012)</option>
+                    <label class="block text-slate-400 mb-1">Equipment / Mesin</label>
+                    <select class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                        <option>Kompresor Screw Utama #1</option>
+                        <option>Genset Perkins 500kVA</option>
+                        <option>Conveyor Line A</option>
+                        <option>LVMDP Panel Utama #1</option>
                     </select>
                 </div>
                 <div>
-                    <label class="font-semibold text-industrial-700 block mb-1">Jenis Pekerjaan</label>
-                    <input type="text" placeholder="Contoh: Perbaikan / Preventive / Overhaul" class="w-full p-2 border rounded-lg">
+                    <label class="block text-slate-400 mb-1">Jenis Pekerjaan</label>
+                    <input type="text" placeholder="Contoh: Perbaikan Ganti Bearing" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="font-semibold text-industrial-700 block mb-1">Prioritas</label>
-                        <select class="w-full p-2 border rounded-lg bg-industrial-50">
+                        <label class="block text-slate-400 mb-1">Prioritas</label>
+                        <select class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
                             <option>Normal</option>
-                            <option>Medium</option>
-                            <option>High / Urgent</option>
+                            <option>High</option>
+                            <option>Critical / Breakdown</option>
                         </select>
                     </div>
                     <div>
-                        <label class="font-semibold text-industrial-700 block mb-1">Teknisi Penanggung Jawab</label>
-                        <select class="w-full p-2 border rounded-lg bg-industrial-50">
-                            <option>Budi Santoso (Mekanik)</option>
-                            <option>Ahmad Fauzi (Elektrik)</option>
-                            <option>Joko Widodo (Automotive)</option>
+                        <label class="block text-slate-400 mb-1">Teknisi Penanggung Jawab</label>
+                        <select class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                            <option>Ahmad Fauzi (Mechanical)</option>
+                            <option>Budi Santoso (Electrical)</option>
+                            <option>Joko Susilo (General)</option>
                         </select>
                     </div>
                 </div>
                 <div>
-                    <label class="font-semibold text-industrial-700 block mb-1">Deskripsi Pekerjaan</label>
-                    <textarea rows="3" placeholder="Jelaskan detail pekerjaan..." class="w-full p-2 border rounded-lg"></textarea>
+                    <label class="block text-slate-400 mb-1">Deskripsi Kerusakan / Pekerjaan</label>
+                    <textarea rows="3" placeholder="Jelaskan detail pekerjaan..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white"></textarea>
                 </div>
             </div>
-            <div class="flex justify-end space-x-2 pt-3 border-t">
-                <button onclick="closeModal('modal-wo')" class="px-4 py-2 bg-industrial-200 text-industrial-700 rounded-lg font-semibold text-xs">Batal</button>
-                <button onclick="submitWO()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-semibold text-xs shadow">Simpan & Terbitkan WO</button>
+            <div class="flex justify-end space-x-2 pt-3 border-t border-slate-800">
+                <button onclick="closeModal('woModal')" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-xl text-xs font-bold">Batal</button>
+                <button onclick="saveItem('Work Order berhasil dibuat!')" class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-xl text-xs font-bold">Simpan & Terbitkan WO</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal Breakdown Emergency -->
-    <div id="modal-breakdown" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl max-w-lg w-full p-6 space-y-4 shadow-2xl border-t-4 border-red-600">
-            <div class="flex justify-between items-center border-b pb-3">
-                <h3 class="font-bold text-base text-red-700 flex items-center"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Laporan Kerusakan & Emergency Breakdown</h3>
-                <button onclick="closeModal('modal-breakdown')" class="text-industrial-400 hover:text-industrial-700"><i class="fa-solid fa-xmark text-lg"></i></button>
+    <!-- 2. Breakdown Modal -->
+    <div id="breakdownModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-rose-900/50 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-rose-500 text-base">Pelaporan Critical Breakdown</h3>
+                <button onclick="closeModal('breakdownModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <div class="space-y-3 text-xs">
                 <div>
-                    <label class="font-semibold text-industrial-700 block mb-1">Equipment Mengalami Kerusakan</label>
-                    <select class="w-full p-2 border rounded-lg bg-industrial-50">
-                        <option>Compressor Utama #02 (Line 3)</option>
-                        <option>Conveyor Line Packing A</option>
-                        <option>Generator Utama 500kVA</option>
+                    <label class="block text-slate-400 mb-1">Equipment / Mesin Breakdown</label>
+                    <select class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                        <option>LVMDP Panel Utama #1</option>
+                        <option>Pompa Centrifugal BO-02</option>
+                        <option>Chiller AC #2</option>
                     </select>
                 </div>
                 <div>
-                    <label class="font-semibold text-industrial-700 block mb-1">Gejala & Keterangan Kerusakan</label>
-                    <textarea rows="2" placeholder="Jelaskan gejala kerusakan..." class="w-full p-2 border rounded-lg">Kebocoran pada seal utama, tekanan drop dibawah 4 bar.</textarea>
+                    <label class="block text-slate-400 mb-1">Gejala Kerusakan & Dampak Produksi</label>
+                    <textarea rows="3" placeholder="Jelaskan gangguan dan dampaknya..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white"></textarea>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="font-semibold text-industrial-700 block mb-1">Dampak Produksi</label>
-                        <input type="text" value="Line produksi 3 berhenti total" class="w-full p-2 border rounded-lg">
-                    </div>
-                    <div>
-                        <label class="font-semibold text-industrial-700 block mb-1">Teknisi Bertugas</label>
-                        <input type="text" value="Budi Santoso" class="w-full p-2 border rounded-lg">
+            </div>
+            <div class="flex justify-end space-x-2 pt-3 border-t border-slate-800">
+                <button onclick="closeModal('breakdownModal')" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-xl text-xs font-bold">Batal</button>
+                <button onclick="saveItem('Laporan Breakdown darurat dikirim ke teknisi!')" class="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-xl text-xs font-bold">Kirim Alert Darurat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Preventive Maintenance Modal -->
+    <div id="pmModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-base">Buat Jadwal Preventive Maintenance</h3>
+                <button onclick="closeModal('pmModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-400 mb-1">Pilih Equipment</label>
+                    <select class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                        <option>Kompresor Screw Utama #1</option>
+                        <option>Genset Perkins 500kVA</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Jenis Frekuensi PM</label>
+                    <select class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                        <option>Harian (Daily)</option>
+                        <option>Mingguan (Weekly)</option>
+                        <option>Bulanan (Monthly)</option>
+                        <option>3 Bulanan (Quarterly)</option>
+                        <option>6 Bulanan (Semi-Annual)</option>
+                        <option>Tahunan (Annual)</option>
+                        <option>Running Hours (500 Jam)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-2 pt-3 border-t border-slate-800">
+                <button onclick="closeModal('pmModal')" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-xl text-xs font-bold">Batal</button>
+                <button onclick="saveItem('Jadwal PM berhasil dibuat!')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold">Simpan Jadwal PM</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Inspection Modal -->
+    <div id="inspectionModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-base">Formulir Inspeksi & Checklist</h3>
+                <button onclick="closeModal('inspectionModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-400 mb-1">Pilih Checklist</label>
+                    <select class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                        <option>Checklist Harian Mesin & Kompresor</option>
+                        <option>Checklist Panel Listrik & SDP</option>
+                        <option>Checklist Genset & Emergency</option>
+                    </select>
+                </div>
+                <div class="space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                    <p class="font-semibold text-white">1. Pemeriksaan Suhu Bearing</p>
+                    <div class="flex space-x-4">
+                        <label><input type="radio" name="check1" checked> ☑ OK</label>
+                        <label><input type="radio" name="check1"> ⚠️ Attention</label>
+                        <label><input type="radio" name="check1" class="text-rose-500"> ❌ NG (Auto-WO)</label>
                     </div>
                 </div>
             </div>
-            <div class="flex justify-end space-x-2 pt-3 border-t">
-                <button onclick="closeModal('modal-breakdown')" class="px-4 py-2 bg-industrial-200 text-industrial-700 rounded-lg font-semibold text-xs">Batal</button>
-                <button onclick="alertBox('Laporan Breakdown berhasil dikirim dan alarm menyala di Notification Center!')" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-xs shadow">Kirim Laporan Critical</button>
+            <div class="flex justify-end space-x-2 pt-3 border-t border-slate-800">
+                <button onclick="closeModal('inspectionModal')" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold">Batal</button>
+                <button onclick="saveItem('Inspeksi berhasil disimpan! Jika NG, WO perbaikan terbuat otomatis.')" class="bg-teal-600 text-white px-4 py-2 rounded-xl text-xs font-bold">Submit Checklist</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. Asset Modal -->
+    <div id="assetModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-base">Tambah Asset & Equipment Baru</h3>
+                <button onclick="closeModal('assetModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-400 mb-1">Nama Equipment</label>
+                    <input type="text" placeholder="Contoh: Pompa Centrifugal #3" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-400 mb-1">Kategori</label>
+                        <select class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                            <option>Mechanical</option>
+                            <option>Electrical</option>
+                            <option>Automotive</option>
+                            <option>HVAC</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1">Lokasi</label>
+                        <input type="text" placeholder="Area Produksi B" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-2 pt-3 border-t border-slate-800">
+                <button onclick="closeModal('assetModal')" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold">Batal</button>
+                <button onclick="saveItem('Asset baru berhasil ditambahkan ke database!')" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold">Simpan Asset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. Sparepart Modal -->
+    <div id="sparepartModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-base">Tambah Spare Part Warehouse</h3>
+                <button onclick="closeModal('sparepartModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-400 mb-1">Nama Spare Part</label>
+                    <input type="text" placeholder="Contoh: Mechanical Seal 2 inch" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-400 mb-1">Part Number / SKU</label>
+                        <input type="text" placeholder="SKU-9921" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1">Jumlah Stock</label>
+                        <input type="number" placeholder="10" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white">
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-2 pt-3 border-t border-slate-800">
+                <button onclick="closeModal('sparepartModal')" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold">Batal</button>
+                <button onclick="saveItem('Spare part berhasil ditambahkan ke warehouse!')" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold">Simpan Part</button>
             </div>
         </div>
     </div>
 
     <script>
-        // Tab Switching Logic
+        // Tab Navigation Function
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(el => {
-                el.classList.remove('bg-brand-600', 'text-white', 'shadow-sm');
-                el.classList.add('text-industrial-300', 'hover:bg-industrial-800', 'hover:text-white');
+            document.getElementById('tab-' + tabId).classList.add('active');
+            
+            // Update sidebar active link styling
+            document.querySelectorAll('.sidebar-link').forEach(link => {
+                link.classList.remove('bg-cyan-600', 'text-white', 'shadow-lg', 'shadow-cyan-900/30');
+                link.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-slate-800');
             });
-            
-            const targetTab = document.getElementById('tab-' + tabId);
-            if (targetTab) targetTab.classList.add('active');
-            
-            const targetNav = document.querySelector(`[data-tab="${tabId}"]`);
-            if (targetNav) {
-                targetNav.classList.remove('text-industrial-300', 'hover:bg-industrial-800');
-                targetNav.classList.add('bg-brand-600', 'text-white', 'shadow-sm');
-            }
+            event.currentTarget.classList.add('bg-cyan-600', 'text-white', 'shadow-lg', 'shadow-cyan-900/30');
+            event.currentTarget.classList.remove('text-slate-400', 'hover:text-white', 'hover:bg-slate-800');
 
-            // Update page header title
-            const titles = {
-                'dashboard': 'Dashboard Utama',
-                'sasaran-mutu': 'Sasaran Mutu (Quality Objective)',
-                'assets': 'Direktori Asset & Equipment',
-                'mechanical': 'Mechanical Maintenance',
-                'electrical': 'Electrical Maintenance & Panel',
-                'automotive': 'Automotive & Fleet Management',
-                'preventive': 'Preventive Maintenance (PM)',
-                'corrective': 'Corrective Maintenance & Perbaikan',
-                'breakdown': 'Critical Breakdown & Emergency',
-                'workorder': 'Work Order (WO) Management',
-                'inspection': 'Checklist & Inspeksi Digital',
-                'planning': 'Planning & Schedule',
-                'inventory': 'Spare Part & Inventory',
-                'documents': 'Dokumentasi & Asset QR',
-                'analytics': 'Analytics & MTBF/MTTR',
-                'reports': 'Pusat Laporan (PDF/Excel)'
-            };
-            document.getElementById('page-title').innerText = titles[tabId] || 'EMMS Management';
-            
-            // Close mobile sidebar
-            if (window.innerWidth < 1024) {
+            // Close mobile sidebar if open
+            if(window.innerWidth < 1024) {
                 document.getElementById('sidebar').classList.add('-translate-x-full');
             }
         }
 
-        function toggleSidebar() {
+        // Sidebar Toggle for Mobile
+        document.getElementById('sidebarToggle').addEventListener('click', () => {
             document.getElementById('sidebar').classList.toggle('-translate-x-full');
+        });
+
+        // Notifications Toggle
+        function toggleNotifications() {
+            const dropdown = document.getElementById('notifDropdown');
+            dropdown.classList.toggle('hidden');
+        }
+        function markAllRead() {
+            document.getElementById('notifBadge').innerText = '0';
+            document.getElementById('notifDropdown').classList.add('hidden');
         }
 
+        // Role Switcher
+        function switchRole(role) {
+            document.getElementById('userRoleDisplay').innerText = role;
+            showToast('Role berhasil diubah ke: ' + role);
+        }
+
+        // Modal Controls
         function openModal(modalId) {
             document.getElementById(modalId).classList.remove('hidden');
+            document.getElementById(modalId).classList.add('flex');
         }
-
         function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('flex');
             document.getElementById(modalId).classList.add('hidden');
         }
 
-        function alertBox(msg) {
-            alert(msg);
-            closeModal('modal-wo');
-            closeModal('modal-breakdown');
+        function saveItem(msg) {
+            document.querySelectorAll('.fixed').forEach(m => {
+                m.classList.remove('flex');
+                m.classList.add('hidden');
+            });
+            showToast(msg);
         }
 
-        function submitWO() {
-            alertBox('Work Order baru berhasil diterbitkan dan dikirim ke teknisi!');
+        // Toast Notification helper
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-5 right-5 bg-cyan-600 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl z-50 animate-bounce';
+            toast.innerHTML = `<i class="fa-solid fa-circle-check mr-2"></i> ${message}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
         }
 
-        function verifyWO(btn) {
-            const row = btn.closest('tr');
-            const statusBadge = row.querySelector('td:nth-child(6) span');
-            statusBadge.className = "bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-semibold text-[10px]";
-            statusBadge.innerText = "Verified & Closed";
-            alert('Work Order telah diverifikasi dan ditutup (Closed). History tersimpan otomatis.');
+        // Actions
+        function executePM(id) {
+            showToast('Mengeksekusi Preventive Maintenance ' + id);
+        }
+        function openRCAModal(id) {
+            showToast('Membuka Lembar Investigasi RCA untuk ' + id);
+            switchTab('breakdown');
+        }
+        function viewWODetail(id) {
+            showToast('Menampilkan Detail Work Order ' + id);
+        }
+        function viewAssetDetail(id) {
+            showToast('Menampilkan Asset Profile & History untuk ' + id);
         }
 
-        // Excel Export using SheetJS
-        function exportExcel() {
-            const data = [
-                ["EMMS - ENGINEERING & MAINTENANCE MANAGEMENT SYSTEM REPORT"],
-                ["Tanggal Ekspor:", new Date().toLocaleString()],
-                [],
-                ["WO Number", "Equipment", "Jenis Pekerjaan", "Prioritas", "Teknisi", "Status"],
-                ["WO-2026-0891", "Compressor Utama #02", "Corrective / Ganti Gasket Seal", "High", "Budi Santoso", "In Progress"],
-                ["WO-2026-0890", "Panel LVMDP Utama", "Preventive / Thermography Check", "Medium", "Ahmad Fauzi", "Assigned"],
-                ["WO-2026-0889", "Forklift Toyota 3Ton", "Routine Service 500 Hours", "Normal", "Joko Widodo", "Completed"]
-            ];
-            const ws = XLSX.utils.aoa_to_sheet(data);
+        // Export Functions (CSV / Excel / PDF using SheetJS and jsPDF)
+        function exportReport(type) {
+            showToast('Mengekspor laporan ' + type + ' ke file Excel...');
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Maintenance Report");
-            XLSX.writeFile(wb, "EMMS_Maintenance_Report.xlsx");
+            const wsData = [
+                ["EMMS REPORT - " + type.toUpperCase()],
+                ["Tanggal Export", new Date().toLocaleString()],
+                [],
+                ["ID", "Equipment", "Status", "Keterangan"],
+                ["001", "Kompresor Screw #1", "Normal", "Operasional Optimal"],
+                ["002", "LVMDP Panel Utama #1", "Breakdown", "Perlu Tindakan Perbaikan"]
+            ];
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, "Laporan " + type);
+            XLSX.writeFile(wb, "EMMS_" + type + "_Report.xlsx");
         }
 
-        // PDF Export using jsPDF
-        function exportPDF() {
+        function exportReportExcel(type) { exportReport(type); }
+
+        function exportReportCSV(type) {
+            showToast('Mengekspor data ke format CSV...');
+            let csvContent = "data:text/csv;charset=utf-8,ID,Equipment,Status\nAST-001,Kompresor Utama,Normal\nAST-002,Panel LVMDP,Breakdown";
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "EMMS_Export.csv");
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }
+
+        function exportReportPDF(type) {
+            showToast('Mengekspor dokumen PDF profesional...');
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            doc.text("EMMS - Engineering & Maintenance Management System", 14, 20);
-            doc.setFontSize(10);
-            doc.text("Laporan Resmi Maintenance & Quality Objective", 14, 28);
-            
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(16);
+            doc.text("ENGINEERING & MAINTENANCE MANAGEMENT SYSTEM", 14, 20);
+            doc.setFontSize(11);
+            doc.text("Laporan Resmi: " + type, 14, 28);
+            doc.setFontSize(9);
+            doc.text("Tanggal: " + new Date().toLocaleString(), 14, 34);
+
             doc.autoTable({
-                startY: 35,
-                head: [['WO Number', 'Equipment', 'Jenis Pekerjaan', 'Prioritas', 'Status']],
+                startY: 40,
+                head: [['No', 'Equipment / Unit', 'Kategori', 'Status', 'Downtime']],
                 body: [
-                    ['WO-2026-0891', 'Compressor Utama #02', 'Corrective Gasket Seal', 'High', 'In Progress'],
-                    ['WO-2026-0890', 'Panel LVMDP Utama', 'Preventive Thermography', 'Medium', 'Assigned'],
-                    ['WO-2026-0889', 'Forklift Toyota 3Ton', 'Routine Service', 'Normal', 'Completed']
+                    ['1', 'Kompresor Screw Utama #1', 'Mechanical', 'Normal', '0 Jam'],
+                    ['2', 'LVMDP Panel Utama #1', 'Electrical', 'Breakdown', '2j 15m'],
+                    ['3', 'Genset Perkins 500kVA', 'Electrical', 'Standby', '0 Jam']
                 ],
             });
-            doc.save("EMMS_Report.pdf");
-        }
-
-        function showNotificationCenter() {
-            alert('Notification Center:\n1. PM Compressor akan jatuh tempo dalam 2 hari\n2. Spare Part Gasket Seal Low Stock (1 pcs)\n3. Critical Breakdown Compressor Utama #02 aktif');
+            doc.save("EMMS_" + type + "_Report.pdf");
         }
 
         // Initialize Charts on Load
         window.onload = function() {
-            // Main Dashboard Chart
-            const ctx = document.getElementById('mainChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Minggu 1', 'Minggu 2', 'Minggu 3', 'Minggu 4'],
-                    datasets: [
-                        { label: 'Preventive Maint.', data: [8, 9, 7, 8], backgroundColor: '#0284c7' },
-                        { label: 'Corrective Maint.', data: [3, 4, 2, 3], backgroundColor: '#f59e0b' },
-                        { label: 'Breakdown', data: [1, 0, 1, 0], backgroundColor: '#dc2626' }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true } }
-                }
-            });
+            // Live clock updater
+            setInterval(() => {
+                const now = new Date();
+                const options = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+                document.getElementById('liveDateTime').innerText = now.toLocaleDateString('id-ID', options) + ' WIB';
+            }, 1000);
 
-            // Analytics Chart
-            const ctx2 = document.getElementById('analyticsChart');
-            if(ctx2) {
-                new Chart(ctx2.getContext('2d'), {
-                    type: 'line',
+            // Chart 1: Preventive vs Corrective
+            const ctx1 = document.getElementById('chartPrevCorr');
+            if(ctx1) {
+                new Chart(ctx1, {
+                    type: 'doughnut',
                     data: {
-                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt'],
-                        datasets: [
-                            { label: 'Equipment Availability (%)', data: [98.1, 98.3, 97.9, 98.5, 98.6, 98.2, 98.4, 98.5, 98.3, 98.4], borderColor: '#0284c7', tension: 0.3 },
-                            { label: 'PM Compliance (%)', data: [95.0, 96.2, 94.8, 97.0, 96.5, 95.8, 96.0, 96.4, 95.9, 96.0], borderColor: '#10b981', tension: 0.3 }
-                        ]
+                        labels: ['Preventive Maint.', 'Corrective Maint.', 'Breakdown'],
+                        datasets: [{
+                            data: [18, 12, 2],
+                            backgroundColor: ['#10b981', '#f59e0b', '#f43f5e']
+                        }]
                     },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false
-                    }
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+
+            // Chart 2: Breakdown Trend
+            const ctx2 = document.getElementById('chartBreakdown');
+            if(ctx2) {
+                new Chart(ctx2, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Jun', 'Jul', 'Agu', 'Sep', 'Okt'],
+                        datasets: [{
+                            label: 'Jam Downtime',
+                            data: [6.5, 4.0, 8.2, 5.1, 4.5],
+                            backgroundColor: '#06b6d4'
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
                 });
             }
         };
