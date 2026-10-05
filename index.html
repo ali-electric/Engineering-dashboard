@@ -1,1341 +1,945 @@
-```html
-<!DOCTYPE html>
-<html lang="id" class="h-full">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ENGINEERING & MAINTENANCE MANAGEMENT SYSTEM PT.SWASA</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        swasa: {
-                            50: '#f0fdf4',
-                            100: '#dcfce7',
-                            500: '#22c55e',
-                            600: '#16a34a',
-                            700: '#15803d',
-                            900: '#14532d',
-                            dark: '#0f172a',
-                            card: '#1e293b'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <!-- FontAwesome & Google Fonts -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-    </style>
-</head>
-<body class="bg-slate-900 text-slate-100 h-full overflow-hidden flex flex-col">
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { 
+  Wrench, Zap, Truck, Users, FileText, BarChart3, Plus, Search, Filter, 
+  Download, Edit3, Trash2, CheckCircle2, Clock, AlertTriangle, RefreshCw, 
+  Settings, Shield, Database, Calendar, UserCheck, Package, ArrowUpRight,
+  Printer, FileSpreadsheet, FileText as FilePdfIcon, Check, X, AlertCircle
+} from 'lucide-react';
 
-    <!-- Top Navigation Bar -->
-    <header class="bg-slate-800 border-b border-slate-700 h-16 flex items-center justify-between px-4 lg:px-6 shrink-0 z-20">
-        <div class="flex items-center space-x-3">
-            <button id="sidebar-toggle" class="text-slate-400 hover:text-white lg:hidden p-2">
-                <i class="fa-solid fa-bars text-xl"></i>
-            </button>
-            <div class="flex items-center space-x-2">
-                <div class="bg-emerald-600 text-white font-bold p-2 rounded-lg flex items-center justify-center w-10 h-10 shadow-lg">
-                    <i class="fa-solid fa-gears text-lg"></i>
+const INITIAL_TECHNICIANS = [
+  { id: 'TECH-001', name: 'Budi Santoso', specialty: 'Mekanik', contact: '+62 812-3456-7890', status: 'Aktif' },
+  { id: 'TECH-002', name: 'Ahmad Fauzi', specialty: 'Elektrik', contact: '+62 813-9876-5432', status: 'Tugas' },
+  { id: 'TECH-003', name: 'Joko Widodo', specialty: 'Otomotif', contact: '+62 821-5555-4433', status: 'Aktif' },
+  { id: 'TECH-004', name: 'Siti Rahma', specialty: 'Elektrik', contact: '+62 856-7788-9900', status: 'Aktif' },
+];
+
+const INITIAL_REPORTS = [
+  {
+    id: 'REP-2026-001',
+    timestampStart: '2026-10-01T08:00',
+    timestampEnd: '2026-10-01T12:30',
+    duration: '4j 30m',
+    technician: 'Budi Santoso',
+    category: 'Mekanik',
+    activityType: 'Corrective',
+    damageDetail: 'Main Conveyor Belt slip parah pada pulley penggerak utama line 3.',
+    actionTaken: 'Penggantian V-Belt tipe B-120 dan penyetelan ulang ketegangan pulley.',
+    nextPlanning: 'Pemeriksaan rutin ketegangan belt setiap 2 minggu sekali.',
+    usedParts: 'V-Belt B-120 (2 pcs)',
+    neededParts: 'Pulley cadangan 8 inch (1 unit)',
+    brokenParts: 'V-Belt lama aus & retak',
+    status: 'Selesai'
+  },
+  {
+    id: 'REP-2026-002',
+    timestampStart: '2026-10-02T09:15',
+    timestampEnd: '2026-10-02T11:00',
+    duration: '1j 45m',
+    technician: 'Ahmad Fauzi',
+    category: 'Elektrik',
+    activityType: 'Preventive',
+    damageDetail: 'Panel Kontrol PLC mengalami overheating akibat debu industri.',
+    actionTaken: 'Pembersihan filter exhaust fan dan pengecekan terminal kabel kontaktor.',
+    nextPlanning: 'Cleaning filter bulanan.',
+    usedParts: 'Contact Cleaner spray (1 can)',
+    neededParts: 'Filter Fan 12x12 cm (2 pcs)',
+    brokenParts: 'Filter kotor tersumbat',
+    status: 'Selesai'
+  },
+  {
+    id: 'REP-2026-003',
+    timestampStart: '2026-10-03T13:00',
+    timestampEnd: '2026-10-03T16:30',
+    duration: '3j 30m',
+    technician: 'Joko Widodo',
+    category: 'Otomotif',
+    activityType: 'Corrective',
+    damageDetail: 'Forklift Diesel #04 bocor oli hidrolik pada seal silinder mast.',
+    actionTaken: 'Penggantian seal kit hidrolik mast dan top-up oli hidrolik ISO VG 46.',
+    nextPlanning: 'Test beban 3 ton pada hari Senin.',
+    usedParts: 'Seal Kit Hidrolik Forklift (1 set), Oli Hidrolik 5L',
+    neededParts: 'Selang High Pressure (1 pcs)',
+    brokenParts: 'Seal lama robek',
+    status: 'Proses'
+  }
+];
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [technicians, setTechnicians] = useState(INITIAL_TECHNICIANS);
+  const [reports, setReports] = useState(INITIAL_REPORTS);
+  
+  // Filter & Search state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('Semua');
+  const [statusFilter, setStatusFilter] = useState('Semua');
+  
+  // Modals state
+  const [isTechModalOpen, setIsTechModalOpen] = useState(false);
+  const [editingTech, setEditingTech] = useState(null);
+  
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [editingReport, setEditingReport] = useState(null);
+  
+  // Notification Toast state
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3500);
+  };
+
+  const analytics = useMemo(() => {
+    const totalReports = reports.length;
+    const completed = reports.filter(r => r.status === 'Selesai').length;
+    const inProgress = reports.filter(r => r.status === 'Proses').length;
+    const preventive = reports.filter(r => r.activityType === 'Preventive').length;
+    const corrective = reports.filter(r => r.activityType === 'Corrective').length;
+
+    const byCategory = {
+      Mekanik: reports.filter(r => r.category === 'Mekanik').length,
+      Elektrik: reports.filter(r => r.category === 'Elektrik').length,
+      Otomotif: reports.filter(r => r.category === 'Otomotif').length,
+    };
+
+    return { totalReports, completed, inProgress, preventive, corrective, byCategory };
+  }, [reports]);
+
+  const filteredReports = useMemo(() => {
+    return reports.filter(rep => {
+      const matchSearch = rep.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          rep.technician.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          rep.damageDetail.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchCat = categoryFilter === 'Semua' || rep.category === categoryFilter;
+      const matchStatus = statusFilter === 'Semua' || rep.status === statusFilter;
+      return matchSearch && matchCat && matchStatus;
+    });
+  }, [reports, searchTerm, categoryFilter, statusFilter]);
+
+  const handleSaveTechnician = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const techData = {
+      id: editingTech ? editingTech.id : `TECH-${String(technicians.length + 1).padStart(3, '0')}`,
+      name: formData.get('name'),
+      specialty: formData.get('specialty'),
+      contact: formData.get('contact'),
+      status: formData.get('status'),
+    };
+
+    if (editingTech) {
+      setTechnicians(technicians.map(t => t.id === editingTech.id ? techData : t));
+      showToast('Data teknisi berhasil diperbarui!');
+    } else {
+      setTechnicians([...technicians, techData]);
+      showToast('Teknisi baru berhasil ditambahkan!');
+    }
+    setIsTechModalOpen(false);
+    setEditingTech(null);
+  };
+
+  const handleDeleteTechnician = (id) => {
+    if (confirm('Apakah Anda yakin ingin menghapus teknisi ini?')) {
+      setTechnicians(technicians.filter(t => t.id !== id));
+      showToast('Teknisi berhasil dihapus.', 'error');
+    }
+  };
+
+  const handleSaveReport = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const start = formData.get('timestampStart');
+    const end = formData.get('timestampEnd');
+
+    // Auto calculate duration if both timestamps exist
+    let durationCalc = '0j 0m';
+    if (start && end) {
+      const diffMs = new Date(end) - new Date(start);
+      if (diffMs > 0) {
+        const hrs = Math.floor(diffMs / (1000 * 60 * 60));
+        const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        durationCalc = `${hrs}j ${mins}m`;
+      }
+    }
+
+    const reportData = {
+      id: editingReport ? editingReport.id : `REP-2026-${String(reports.length + 1).padStart(3, '0')}`,
+      timestampStart: start,
+      timestampEnd: end,
+      duration: durationCalc,
+      technician: formData.get('technician'),
+      category: formData.get('category'),
+      activityType: formData.get('activityType'),
+      damageDetail: formData.get('damageDetail'),
+      actionTaken: formData.get('actionTaken'),
+      nextPlanning: formData.get('nextPlanning'),
+      usedParts: formData.get('usedParts'),
+      neededParts: formData.get('neededParts'),
+      brokenParts: formData.get('brokenParts'),
+      status: formData.get('status'),
+    };
+
+    if (editingReport) {
+      setReports(reports.map(r => r.id === editingReport.id ? reportData : r));
+      showToast('Laporan maintenance berhasil diperbarui!');
+    } else {
+      setReports([reportData, ...reports]);
+      showToast('Laporan maintenance baru berhasil dibuat!');
+    }
+    setIsReportModalOpen(false);
+    setEditingReport(null);
+  };
+
+  const handleDeleteReport = (id) => {
+    if (confirm('Hapus laporan maintenance ini secara permanen?')) {
+      setReports(reports.filter(r => r.id !== id));
+      showToast('Laporan berhasil dihapus.', 'error');
+    }
+  };
+
+  const exportToCSV = () => {
+    const headers = ['ID', 'Mulai', 'Selesai', 'Durasi', 'Teknisi', 'Kategori', 'Tipe', 'Kerusakan', 'Tindakan', 'Status'];
+    const rows = reports.map(r => [
+      r.id, r.timestampStart, r.timestampEnd, r.duration, r.technician, r.category, r.activityType,
+      `"${r.damageDetail}"`, `"${r.actionTaken}"`, r.status
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `EMMS_Reports_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Berhasil mengekspor data ke format CSV!');
+  };
+
+  const exportToExcel = () => {
+    // Simulated Excel XML / Tab-separated Table Export
+    let html = `<table><tr><th>ID</th><th>Mulai</th><th>Selesai</th><th>Durasi</th><th>Teknisi</th><th>Kategori</th><th>Kegiatan</th><th>Kerusakan</th><th>Tindakan</th><th>Status</th></tr>`;
+    reports.forEach(r => {
+      html += `<tr><td>${r.id}</td><td>${r.timestampStart}</td><td>${r.timestampEnd}</td><td>${r.duration}</td><td>${r.technician}</td><td>${r.category}</td><td>${r.activityType}</td><td>${r.damageDetail}</td><td>${r.actionTaken}</td><td>${r.status}</td></tr>`;
+    });
+    html += `</table>`;
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `EMMS_Report_${new Date().toISOString().slice(0,10)}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('Berhasil mengekspor data ke format Excel (.xls)!');
+  };
+
+  const printPDF = () => {
+    window.print();
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-orange-500 selection:text-white pb-12">
+      {/* Background ambient lighting effects */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute -top-40 -left-40 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/3 -right-40 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 left-1/3 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
+      </div>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl backdrop-blur-xl border transition-all animate-bounce ${
+          toast.type === 'error' ? 'bg-red-950/80 border-red-500/50 text-red-200' : 'bg-slate-900/90 border-cyan-500/50 text-cyan-200'
+        }`}>
+          {toast.type === 'error' ? <AlertCircle className="w-5 h-5 text-red-400" /> : <CheckCircle2 className="w-5 h-5 text-cyan-400" />}
+          <span className="text-sm font-medium">{toast.message}</span>
+        </div>
+      )}
+
+      {}
+      <header className="relative z-10 border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-xl sticky top-0 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 via-cyan-500 to-orange-500 p-0.5 shadow-lg shadow-cyan-500/20 flex items-center justify-center">
+              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+                <Shield className="w-6 h-6 text-cyan-400 animate-pulse" />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <h1 className="text-xl font-black tracking-wider bg-gradient-to-r from-white via-slate-200 to-cyan-400 bg-clip-text text-transparent">
+                  EMMS <span className="text-orange-500 text-xs px-2 py-0.5 bg-orange-500/10 rounded-full border border-orange-500/30">Enterprise v3.2</span>
+                </h1>
+              </div>
+              <p className="text-xs text-slate-400">Engineering Maintenance & Asset Management Suite</p>
+            </div>
+          </div>
+
+          <div className="hidden md:flex items-center space-x-6 text-sm">
+            <div className="flex items-center space-x-2 bg-slate-800/40 px-3 py-1.5 rounded-lg border border-slate-700/50">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+              <span className="text-slate-300 font-medium">System Online</span>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-slate-400">Database Engine</p>
+              <p className="text-xs font-semibold text-cyan-400">PostgreSQL Cloud Cluster</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Tabs */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-2 overflow-x-auto pb-3">
+          {[
+            { id: 'dashboard', label: 'Dashboard & Analitik', icon: BarChart3 },
+            { id: 'reports', label: 'Laporan Maintenance', icon: FileText },
+            { id: 'technicians', label: 'Manajemen Teknisi', icon: Users },
+          ].map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${
+                  isActive 
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/25 border border-cyan-400/30' 
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                }`}
+              >
+                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </header>
+
+      {}
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+
+        {/* -------------------- TAB 1: DASHBOARD & ANALITIK -------------------- */}
+        {activeTab === 'dashboard' && (
+          <div className="space-y-8 animate-fadeIn">
+            {/* Top Metric Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {[
+                { title: 'Total Laporan', value: analytics.totalReports, icon: FileText, color: 'from-blue-600 to-cyan-500', note: '+12% dari bulan lalu' },
+                { title: 'Maintenance Selesai', value: analytics.completed, icon: CheckCircle2, color: 'from-emerald-600 to-teal-500', note: `${Math.round((analytics.completed/analytics.totalReports)*100 || 0)}% tingkat penyelesaian` },
+                { title: 'Dalam Proses', value: analytics.inProgress, icon: Clock, color: 'from-amber-600 to-orange-500', note: 'Memerlukan atensi' },
+                { title: 'Preventive / Corrective', value: `${analytics.preventive} / ${analytics.corrective}`, icon: Wrench, color: 'from-purple-600 to-indigo-500', note: 'Rasio Perawatan' },
+              ].map((card, idx) => {
+                const Icon = card.icon;
+                return (
+                  <div key={idx} className="bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-slate-700 transition-all">
+                    <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-gradient-to-br opacity-10 rounded-full blur-2xl group-hover:opacity-20 transition-all"></div>
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-sm font-medium text-slate-400">{card.title}</span>
+                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${card.color} flex items-center justify-center text-white shadow-md`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                    </div>
+                    <div className="text-3xl font-extrabold text-white mb-1 tracking-tight">{card.value}</div>
+                    <div className="text-xs text-slate-400">{card.note}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Category Breakdown & Quick Actions */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Category Breakdown */}
+              <div className="lg:col-span-2 bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-6 shadow-xl">
+                <h3 className="text-lg font-bold text-white mb-6 flex items-center space-x-2">
+                  <BarChart3 className="w-5 h-5 text-cyan-400" />
+                  <span>Distribusi Berdasarkan Bidang Keahlian</span>
+                </h3>
+                <div className="space-y-5">
+                  {[
+                    { name: 'Mekanik (Mechanical)', count: analytics.byCategory.Mekanik, total: analytics.totalReports, color: 'bg-orange-500', icon: Wrench },
+                    { name: 'Elektrik (Electrical)', count: analytics.byCategory.Elektrik, total: analytics.totalReports, color: 'bg-cyan-500', icon: Zap },
+                    { name: 'Otomotif (Automotive)', count: analytics.byCategory.Otomotif, total: analytics.totalReports, color: 'bg-blue-500', icon: Truck },
+                  ].map((cat, idx) => {
+                    const percentage = cat.total > 0 ? Math.round((cat.count / cat.total) * 100) : 0;
+                    const Icon = cat.icon;
+                    return (
+                      <div key={idx} className="space-y-2">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="flex items-center space-x-2 font-medium text-slate-200">
+                            <Icon className="w-4 h-4 text-slate-400" />
+                            <span>{cat.name}</span>
+                          </span>
+                          <span className="font-bold text-white">{cat.count} Laporan ({percentage}%)</span>
+                        </div>
+                        <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden p-0.5 border border-slate-700/50">
+                          <div className={`${cat.color} h-full rounded-full transition-all duration-1000`} style={{ width: `${percentage}%` }}></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Quick Action Panel */}
+              <div className="bg-gradient-to-br from-slate-900/80 to-slate-900/40 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-2">Panel Kontrol Cepat</h3>
+                  <p className="text-xs text-slate-400 mb-6">Akses instan untuk membuat laporan baru atau mendaftarkan teknisi tim.</p>
+                  
+                  <div className="space-y-3">
+                    <button 
+                      onClick={() => { setEditingReport(null); setIsReportModalOpen(true); }}
+                      className="w-full flex items-center justify-between px-4 py-3.5 bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-amber-700 transition-all shadow-lg shadow-orange-500/20"
+                    >
+                      <span className="flex items-center space-x-2">
+                        <Plus className="w-5 h-5" />
+                        <span>Buat Laporan Maintenance</span>
+                      </span>
+                      <ArrowUpRight className="w-4 h-4" />
+                    </button>
+
+                    <button 
+                      onClick={() => { setEditingTech(null); setIsTechModalOpen(true); }}
+                      className="w-full flex items-center justify-between px-4 py-3.5 bg-slate-800/80 hover:bg-slate-800 text-slate-200 rounded-xl font-semibold border border-slate-700 transition-all"
+                    >
+                      <span className="flex items-center space-x-2">
+                        <Users className="w-5 h-5 text-cyan-400" />
+                        <span>Tambah Teknisi Baru</span>
+                      </span>
+                      <ArrowUpRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-6 border-t border-slate-800/80">
+                  <div className="flex items-center justify-between text-xs text-slate-400">
+                    <span>Aktivitas Sistem Terakhir:</span>
+                    <span className="text-cyan-400 font-mono">Baru saja</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* -------------------- TAB 2: LAPORAN MAINTENANCE -------------------- */}
+        {activeTab === 'reports' && (
+          <div className="space-y-6 animate-fadeIn">
+            {/* Header controls & Export buttons */}
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 p-6 rounded-2xl shadow-xl">
+              <div>
+                <h2 className="text-xl font-bold text-white">Modul Laporan Maintenance</h2>
+                <p className="text-xs text-slate-400">Kelola dan pantau seluruh riwayat perbaikan, preventive, material, dan sparepart.</p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                <button 
+                  onClick={exportToExcel}
+                  className="flex items-center space-x-2 px-4 py-2.5 bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs font-semibold hover:bg-emerald-600/30 transition-all"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  <span>Ekspor Excel</span>
+                </button>
+                <button 
+                  onClick={exportToCSV}
+                  className="flex items-center space-x-2 px-4 py-2.5 bg-blue-600/20 border border-blue-500/40 text-blue-300 rounded-xl text-xs font-semibold hover:bg-blue-600/30 transition-all"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Ekspor CSV</span>
+                </button>
+                <button 
+                  onClick={printPDF}
+                  className="flex items-center space-x-2 px-4 py-2.5 bg-purple-600/20 border border-purple-500/40 text-purple-300 rounded-xl text-xs font-semibold hover:bg-purple-600/30 transition-all"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Cetak / PDF</span>
+                </button>
+                <button 
+                  onClick={() => { setEditingReport(null); setIsReportModalOpen(true); }}
+                  className="flex items-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-xl text-xs font-semibold hover:from-orange-600 shadow-lg shadow-orange-500/20 transition-all ml-auto md:ml-0"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Tambah Laporan</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Filters Bar */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800/80 p-4 rounded-2xl">
+              <div className="relative">
+                <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
+                <input 
+                  type="text" 
+                  placeholder="Cari ID, Teknisi, atau detail kerusakan..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-slate-950/60 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all"
+                />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+                <select 
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500 transition-all"
+                >
+                  <option value="Semua">Semua Kategori (Bidang)</option>
+                  <option value="Mekanik">Mekanik</option>
+                  <option value="Elektrik">Elektrik</option>
+                  <option value="Otomotif">Otomotif</option>
+                </select>
+              </div>
+
+              <div>
+                <select 
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500 transition-all"
+                >
+                  <option value="Semua">Semua Status</option>
+                  <option value="Selesai">Selesai</option>
+                  <option value="Proses">Proses</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Reports Table / Cards */}
+            <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 rounded-2xl shadow-xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400 text-xs uppercase tracking-wider font-semibold">
+                      <th className="p-4">ID & Waktu</th>
+                      <th className="p-4">Teknisi & Bidang</th>
+                      <th className="p-4">Kegiatan</th>
+                      <th className="p-4">Detail Kerusakan & Tindakan</th>
+                      <th className="p-4">Sparepart / Material</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4 text-right">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 text-sm">
+                    {filteredReports.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" className="p-8 text-center text-slate-500">
+                          Tidak ada laporan maintenance yang ditemukan.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredReports.map(rep => (
+                        <tr key={rep.id} className="hover:bg-slate-800/30 transition-all">
+                          <td className="p-4 align-top">
+                            <span className="font-mono font-bold text-cyan-400 text-xs block mb-1">{rep.id}</span>
+                            <div className="text-xs text-slate-400 space-y-0.5">
+                              <div>Start: {rep.timestampStart.replace('T', ' ')}</div>
+                              <div>Durasi: <span className="text-slate-200 font-semibold">{rep.duration}</span></div>
+                            </div>
+                          </td>
+                          <td className="p-4 align-top">
+                            <div className="font-semibold text-white">{rep.technician}</div>
+                            <span className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                              rep.category === 'Mekanik' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/30' :
+                              rep.category === 'Elektrik' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30' :
+                              'bg-blue-500/10 text-blue-400 border border-blue-500/40'
+                            }`}>
+                              {rep.category}
+                            </span>
+                          </td>
+                          <td className="p-4 align-top">
+                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                              rep.activityType === 'Preventive' ? 'bg-purple-500/20 text-purple-300' : 'bg-amber-500/20 text-amber-300'
+                            }`}>
+                              {rep.activityType}
+                            </span>
+                          </td>
+                          <td className="p-4 align-top max-w-xs">
+                            <div className="text-slate-200 font-medium mb-1 line-clamp-2"><strong>Kerusakan:</strong> {rep.damageDetail}</div>
+                            <div className="text-xs text-slate-400 line-clamp-2"><strong>Tindakan:</strong> {rep.actionTaken}</div>
+                            <div className="text-xs text-cyan-400/80 mt-1"><strong>Planning:</strong> {rep.nextPlanning}</div>
+                          </td>
+                          <td className="p-4 align-top text-xs space-y-1">
+                            <div><span className="text-slate-400">Terpakai:</span> <span className="text-emerald-400">{rep.usedParts}</span></div>
+                            <div><span className="text-slate-400">Req:</span> <span className="text-orange-400">{rep.neededParts}</span></div>
+                            <div><span className="text-slate-400">Afkir:</span> <span className="text-red-400">{rep.brokenParts}</span></div>
+                          </td>
+                          <td className="p-4 align-top">
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold inline-flex items-center space-x-1.5 ${
+                              rep.status === 'Selesai' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${rep.status === 'Selesai' ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`}></span>
+                              <span>{rep.status}</span>
+                            </span>
+                          </td>
+                          <td className="p-4 align-top text-right space-x-2 whitespace-nowrap">
+                            <button 
+                              onClick={() => { setEditingReport(rep); setIsReportModalOpen(true); }}
+                              className="p-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-lg transition-all"
+                              title="Edit Laporan"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteReport(rep.id)}
+                              className="p-2 bg-slate-800 hover:bg-red-900/50 text-red-400 rounded-lg transition-all"
+                              title="Hapus Laporan"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* -------------------- TAB 3: MANAJEMEN TEKNISI -------------------- */}
+        {activeTab === 'technicians' && (
+          <div className="space-y-6 animate-fadeIn">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 p-6 rounded-2xl shadow-xl">
+              <div>
+                <h2 className="text-xl font-bold text-white">Manajemen Tim Teknisi & Mekanik</h2>
+                <p className="text-xs text-slate-400">Tambah, ubah, dan pantau status ketersediaan personel teknik di lapangan.</p>
+              </div>
+
+              <button 
+                onClick={() => { setEditingTech(null); setIsTechModalOpen(true); }}
+                className="flex items-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl text-xs font-semibold hover:from-cyan-600 shadow-lg shadow-cyan-500/25 transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Tambah Teknisi Baru</span>
+              </button>
+            </div>
+
+            {/* Technicians Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {technicians.map(tech => (
+                <div key={tech.id} className="bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-6 shadow-xl relative group hover:border-cyan-500/50 transition-all">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-800 to-slate-700 border border-slate-700 flex items-center justify-center text-cyan-400 font-bold text-lg shadow-inner">
+                        {tech.name.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-white text-base">{tech.name}</h4>
+                        <span className="font-mono text-xs text-cyan-400">{tech.id}</span>
+                      </div>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                      tech.status === 'Aktif' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                    }`}>
+                      {tech.status}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5 text-sm mb-6 pt-3 border-t border-slate-800/80">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Spesialisasi:</span>
+                      <span className={`font-semibold px-2 py-0.5 rounded text-xs ${
+                        tech.specialty === 'Mekanik' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/30' :
+                        tech.specialty === 'Elektrik' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30' :
+                        'bg-blue-500/10 text-blue-400 border border-blue-500/40'
+                      }`}>
+                        {tech.specialty}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Kontak (WhatsApp):</span>
+                      <span className="text-slate-200 font-mono text-xs">{tech.contact}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-800/80">
+                    <button 
+                      onClick={() => { setEditingTech(tech); setIsTechModalOpen(true); }}
+                      className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-lg text-xs font-medium transition-all"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Edit</span>
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteTechnician(tech.id)}
+                      className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-red-950 text-red-400 rounded-lg text-xs font-medium transition-all"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Hapus</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </main>
+
+      {/* -------------------- MODAL: TAMBAH / EDIT TEKNISI -------------------- */}
+      {isTechModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl relative">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
+              <h3 className="text-lg font-bold text-white">
+                {editingTech ? 'Edit Data Teknisi' : 'Tambah Teknisi Baru'}
+              </h3>
+              <button 
+                onClick={() => setIsTechModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1.5 rounded-lg bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTechnician} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Nama Lengkap & Gelar</label>
+                <input 
+                  type="text" 
+                  name="name" 
+                  defaultValue={editingTech ? editingTech.name : ''} 
+                  required 
+                  placeholder="Misal: Bambang Pamungkas, S.T."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Spesialisasi Bidang</label>
+                <select 
+                  name="specialty" 
+                  defaultValue={editingTech ? editingTech.specialty : 'Mekanik'}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500"
+                >
+                  <option value="Mekanik">Mekanik</option>
+                  <option value="Elektrik">Elektrik</option>
+                  <option value="Otomotif">Otomotif</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Kontak / Nomor WhatsApp</label>
+                <input 
+                  type="text" 
+                  name="contact" 
+                  defaultValue={editingTech ? editingTech.contact : '+62 8...'} 
+                  required 
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Status Keaktifan</label>
+                <select 
+                  name="status" 
+                  defaultValue={editingTech ? editingTech.status : 'Aktif'}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500"
+                >
+                  <option value="Aktif">Aktif</option>
+                  <option value="Tugas">Tugas Lapangan</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-800">
+                <button 
+                  type="button" 
+                  onClick={() => setIsTechModalOpen(false)}
+                  className="px-4 py-2.5 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-700"
+                >
+                  Batal
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl text-xs font-semibold shadow-lg shadow-cyan-500/20"
+                >
+                  Simpan Teknisi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* -------------------- MODAL: TAMBAH / EDIT LAPORAN MAINTENANCE -------------------- */}
+      {isReportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative my-8">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
+              <h3 className="text-lg font-bold text-white">
+                {editingReport ? 'Edit Laporan Maintenance' : 'Buat Laporan Maintenance Baru'}
+              </h3>
+              <button 
+                onClick={() => setIsReportModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1.5 rounded-lg bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveReport} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Timestamp Mulai Pengerjaan</label>
+                  <input 
+                    type="datetime-local" 
+                    name="timestampStart" 
+                    defaultValue={editingReport ? editingReport.timestampStart : new Date().toISOString().slice(0,16)} 
+                    required 
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                  />
                 </div>
                 <div>
-                    <h1 class="font-bold text-sm lg:text-base tracking-wide text-white">PT. SWASA</h1>
-                    <p class="text-xs text-emerald-400 font-medium">Engineering & Maintenance System</p>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Timestamp Selesai Pengerjaan</label>
+                  <input 
+                    type="datetime-local" 
+                    name="timestampEnd" 
+                    defaultValue={editingReport ? editingReport.timestampEnd : new Date().toISOString().slice(0,16)} 
+                    required 
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                  />
                 </div>
-            </div>
-        </div>
+              </div>
 
-        <div class="flex items-center space-x-3">
-            <!-- Global Live Clock -->
-            <div id="live-clock" class="hidden md:flex items-center space-x-2 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700 text-xs text-slate-300 font-mono">
-                <i class="fa-regular fa-clock text-emerald-400"></i>
-                <span id="current-datetime">--</span>
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Teknisi Bertugas</label>
+                  <select 
+                    name="technician" 
+                    defaultValue={editingReport ? editingReport.technician : technicians[0]?.name}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                  >
+                    {technicians.map(t => (
+                      <option key={t.id} value={t.name}>{t.name} ({t.specialty})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Kategori Bidang</label>
+                  <select 
+                    name="category" 
+                    defaultValue={editingReport ? editingReport.category : 'Mekanik'}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                  >
+                    <option value="Mekanik">Mekanik</option>
+                    <option value="Elektrik">Elektrik</option>
+                    <option value="Otomotif">Otomotif</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Jenis Kegiatan</label>
+                  <select 
+                    name="activityType" 
+                    defaultValue={editingReport ? editingReport.activityType : 'Corrective'}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                  >
+                    <option value="Corrective">Perbaikan (Corrective/Breakdown)</option>
+                    <option value="Preventive">Perawatan (Preventive)</option>
+                  </select>
+                </div>
+              </div>
 
-            <!-- Notification Bell -->
-            <div class="relative">
-                <button onclick="app.toggleNotifications()" class="relative p-2 text-slate-400 hover:text-white bg-slate-900 rounded-lg border border-slate-700 hover:border-slate-600 transition">
-                    <i class="fa-solid fa-bell text-lg"></i>
-                    <span id="notif-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">3</span>
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Detail Kerusakan / Temuan Lapangan</label>
+                <textarea 
+                  name="damageDetail" 
+                  rows="2"
+                  defaultValue={editingReport ? editingReport.damageDetail : ''} 
+                  required 
+                  placeholder="Uraikan kondisi kerusakan unit..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                ></textarea>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Tindakan Perbaikan yang Dilakukan</label>
+                <textarea 
+                  name="actionTaken" 
+                  rows="2"
+                  defaultValue={editingReport ? editingReport.actionTaken : ''} 
+                  required 
+                  placeholder="Uraikan solusi dan langkah perbaikan..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                ></textarea>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Sparepart Terpakai (Keluar)</label>
+                  <input 
+                    type="text" 
+                    name="usedParts" 
+                    defaultValue={editingReport ? editingReport.usedParts : ''} 
+                    placeholder="Contoh: Bearing 6204 (2 pcs)"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Sparepart Dibutuhkan (PR)</label>
+                  <input 
+                    type="text" 
+                    name="neededParts" 
+                    defaultValue={editingReport ? editingReport.neededParts : ''} 
+                    placeholder="Contoh: Mechanical Seal (1 unit)"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Barang Rusak / Afkir / Retur</label>
+                  <input 
+                    type="text" 
+                    name="brokenParts" 
+                    defaultValue={editingReport ? editingReport.brokenParts : ''} 
+                    placeholder="Contoh: Gearbox aus"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Perencanaan / Jadwal Maintenance Berikutnya</label>
+                  <input 
+                    type="text" 
+                    name="nextPlanning" 
+                    defaultValue={editingReport ? editingReport.nextPlanning : ''} 
+                    placeholder="Misal: Cek berkala 1 bulan ke depan"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Status Laporan</label>
+                  <select 
+                    name="status" 
+                    defaultValue={editingReport ? editingReport.status : 'Selesai'}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                  >
+                    <option value="Selesai">Selesai</option>
+                    <option value="Proses">Dalam Proses</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-800">
+                <button 
+                  type="button" 
+                  onClick={() => setIsReportModalOpen(false)}
+                  className="px-4 py-2.5 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-700"
+                >
+                  Batal
                 </button>
-                <!-- Notification Dropdown -->
-                <div id="notif-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden">
-                    <div class="p-3 border-b border-slate-700 flex justify-between items-center bg-slate-900/50">
-                        <span class="font-bold text-xs uppercase text-slate-300">Notification Center</span>
-                        <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">3 New</span>
-                    </div>
-                    <div id="notif-list" class="max-h-64 overflow-y-auto divide-y divide-slate-700/50 text-xs">
-                        <!-- Populated by JS -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- User Profile & Role -->
-            <div class="flex items-center space-x-2 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700">
-                <div class="w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
-                    <i class="fa-solid fa-user-gear"></i>
-                </div>
-                <div class="hidden sm:block text-left">
-                    <p class="text-xs font-semibold text-white" id="current-username">Beh.Rocky</p>
-                    <p class="text-[10px] text-emerald-400 font-medium" id="current-userrole">Engineering Manager</p>
-                </div>
-            </div>
+                <button 
+                  type="submit" 
+                  className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-xl text-xs font-semibold shadow-lg shadow-orange-500/20"
+                >
+                  Simpan Laporan
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-    </header>
+      )}
 
-    <!-- Main App Body -->
-    <div class="flex-1 flex overflow-hidden">
-        <!-- Sidebar Navigation -->
-        <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-slate-800 border-r border-slate-700 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-200 flex flex-col">
-            <div class="p-4 border-b border-slate-700 flex justify-between items-center lg:hidden">
-                <span class="font-bold text-sm">Menu Navigasi</span>
-                <button onclick="app.toggleSidebar()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            <nav id="nav-menu" class="flex-1 overflow-y-auto p-3 space-y-1 text-xs font-medium">
-                <!-- Nav items generated via script -->
-            </nav>
-            <div class="p-3 border-t border-slate-700 bg-slate-900/50 text-center text-[10px] text-slate-500">
-                PT.SWASA Re2 v4.2 Pro &bull; 2026
-            </div>
-        </aside>
-
-        <!-- Main Content Area -->
-        <main id="main-content" class="flex-1 overflow-y-auto bg-slate-900 p-4 lg:p-6 relative">
-            <!-- Dynamic Content Container -->
-            <div id="view-container" class="max-w-7xl mx-auto space-y-6">
-                <!-- Dynamic View Rendered Here -->
-            </div>
-        </main>
     </div>
-
-    <!-- Global Universal Modal -->
-    <div id="global-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
-        <div id="modal-box" class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl transform transition-all">
-            <div class="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-900/50">
-                <h3 id="modal-title" class="font-bold text-sm text-white">Form Modal</h3>
-                <button onclick="app.closeModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            <div id="modal-body" class="p-6 max-h-[75vh] overflow-y-auto">
-                <!-- Dynamic Modal Content -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast Notification Container -->
-    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
-
-    <script>
-        // Core Application State & Data Stores
-        const appState = {
-            currentView: 'dashboard',
-            user: { name: 'Ir. Budi Santoso, ST', role: 'Engineering Manager' },
-            currentTime: new Date(),
-            notifications: [
-                { id: 1, title: 'Breakdown Critical', desc: 'CNC Milling Machine #02 stopped unexpectedly.', time: '10 mins ago', type: 'danger' },
-                { id: 2, title: 'PM Due Today', desc: 'Preventive Maintenance Transformer Utama 150KVA.', time: '1 hour ago', type: 'warning' },
-                { id: 3, title: 'Low Stock Alert', desc: 'Bearing SKF 6308 remaining stock below minimum.', time: '3 hours ago', type: 'warning' }
-            ],
-            // Personnel customizable
-            personnel: {
-                mechanics: ['Andi Pratama', 'Joko Susilo', 'Rian Hidayat', 'Doni Setiawan'],
-                electricians: ['Slamet Riyadi', 'Wahyu Hidayat', 'Fajar Nugroho', 'Dedi Kurniawan'],
-                supervisors: ['Ir. Budi Santoso', 'Agus Setiawan, ST', 'Hendra Wijaya, MT']
-            },
-            assets: [
-                { id: 'AST-001', name: 'Main Compressor Atlas Copco', category: 'Mechanical', location: 'Compressor Room', condition: 'Good', criticality: 'High', serial: 'AC-99281', hours: 4210 },
-                { id: 'AST-002', name: 'Transformer Utama 1000kVA', category: 'Electrical', location: 'Substation A', condition: 'Good', criticality: 'Critical', serial: 'TR-11029', hours: 8760 },
-                { id: 'AST-003', name: 'Forklift Toyota 3T', category: 'Automotive', location: 'Warehouse Central', condition: 'Attention', criticality: 'Medium', serial: 'FL-30219', hours: 1950 },
-                { id: 'AST-004', name: 'CNC Milling Mazak 5-Axis', category: 'Workshop', location: 'Production Line 1', condition: 'Breakdown', criticality: 'Critical', serial: 'MZ-88392', hours: 6100 },
-                { id: 'AST-005', name: 'Chiller HVAC Central', category: 'HVAC', location: 'Roof Top Building B', condition: 'Good', criticality: 'Medium', serial: 'CH-44921', hours: 3400 }
-            ],
-            preventive: [
-                { id: 'PM-2026-001', asset: 'Main Compressor Atlas Copco', assetId: 'AST-001', type: 'Bulanan', schedule: '2026-10-10', technician: 'Andi Pratama', supervisor: 'Ir. Budi Santoso', status: 'Scheduled' },
-                { id: 'PM-2026-002', asset: 'Transformer Utama 1000kVA', assetId: 'AST-002', type: '3 Bulanan', schedule: '2026-10-06', technician: 'Slamet Riyadi', supervisor: 'Agus Setiawan, ST', status: 'In Progress' },
-                { id: 'PM-2026-003', asset: 'Forklift Toyota 3T', assetId: 'AST-003', type: 'Mingguan', schedule: '2026-10-05', technician: 'Doni Setiawan', supervisor: 'Hendra Wijaya, MT', status: 'Completed' }
-            ],
-            corrective: [
-                { id: 'CM-2026-101', asset: 'CNC Milling Mazak 5-Axis', issue: 'Spindle overload and vibration error', cause: 'Bearing wear out', action: 'Replacing spindle bearing & alignment', technician: 'Andi Pratama', downtime: '4.5 Hours', cost: 'Rp 4.500.000', status: 'In Progress' },
-                { id: 'CM-2026-102', asset: 'Chiller HVAC Central', issue: 'Low refrigerant pressure alarm', cause: 'Leakage on pipe connector', action: 'Welding pipe & recharging Freon R410A', technician: 'Slamet Riyadi', downtime: '2.0 Hours', cost: 'Rp 1.800.000', status: 'Closed' }
-            ],
-            workOrders: [
-                { id: 'WO-8801', date: '2026-10-05', requester: 'Production Dept', equipment: 'CNC Milling Mazak', type: 'Corrective', priority: 'High', technician: 'Andi Pratama', status: 'In Progress' },
-                { id: 'WO-8802', date: '2026-10-06', requester: 'Facility Dept', equipment: 'Main Compressor', type: 'Preventive', priority: 'Medium', technician: 'Joko Susilo', status: 'Planned' }
-            ],
-            spareparts: [
-                { code: 'SP-001', name: 'Bearing SKF 6308', category: 'Mechanical', stock: 3, minStock: 5, location: 'Rack A-01', price: 'Rp 350.000' },
-                { code: 'SP-002', name: 'MCB 3P 63A Schneider', category: 'Electrical', stock: 12, minStock: 4, location: 'Rack B-03', price: 'Rp 850.000' },
-                { code: 'SP-003', name: 'Oli Hydraulic ISO VG 68 (Drum)', category: 'Lubricant', stock: 2, minStock: 2, location: 'Fluid Room', price: 'Rp 2.400.000' },
-                { code: 'SP-004', name: 'Filter Udara Kompresor', category: 'Filter', stock: 1, minStock: 3, location: 'Rack C-02', price: 'Rp 650.000' }
-            ]
-        };
-
-        // Navigation Menu Definition
-        const menuItems = [
-            { id: 'dashboard', name: 'Dashboard Utama', icon: 'fa-chart-pie' },
-            { id: 'sasaran-mutu', name: 'Sasaran Mutu Dashboard', icon: 'fa-bullseye' },
-            { id: 'assets', name: 'Asset / Equipment', icon: 'fa-server' },
-            { id: 'mechanical', name: 'Mechanical Maintenance', icon: 'fa-gears' },
-            { id: 'electrical', name: 'Electrical Maintenance', icon: 'fa-bolt' },
-            { id: 'automotive', name: 'Automotive / Fleet', icon: 'fa-truck-fast' },
-            { id: 'preventive', name: 'Preventive Maintenance', icon: 'fa-calendar-check' },
-            { id: 'corrective', name: 'Corrective & Breakdown', icon: 'fa-triangle-exclamation' },
-            { id: 'workorders', name: 'Work Order (WO)', icon: 'fa-clipboard-list' },
-            { id: 'inspection', name: 'Inspection & Checklist', icon: 'fa-list-check' },
-            { id: 'planning', name: 'Maintenance Planning', icon: 'fa-calendar-days' },
-            { id: 'spareparts', name: 'Spare Part & Inventory', icon: 'fa-boxes-stacked' },
-            { id: 'documents', name: 'Dokumentasi & QR', icon: 'fa-folder-open' },
-            { id: 'analytics', name: 'Analytics & MTBF/MTTR', icon: 'fa-chart-line' },
-            { id: 'reports', name: 'Reports & Export', icon: 'fa-file-arrow-down' },
-            { id: 'settings', name: 'Pengaturan & Personil', icon: 'fa-user-gear' }
-        ];
-
-        class CMMSApp {
-            constructor() {
-                this.initClock();
-                this.renderSidebar();
-                this.navigateTo('dashboard');
-                this.setupEventListeners();
-            }
-
-            initClock() {
-                setInterval(() => {
-                    const now = new Date();
-                    const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
-                    document.getElementById('current-datetime').innerText = now.toLocaleDateString('id-ID', options);
-                }, 1000);
-            }
-
-            renderSidebar() {
-                const nav = document.getElementById('nav-menu');
-                nav.innerHTML = menuItems.map(item => `
-                    <button onclick="app.navigateTo('${item.id}')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl transition ${appState.currentView === item.id ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30 font-semibold' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'}">
-                        <i class="fa-solid ${item.icon} w-5 text-center text-sm ${appState.currentView === item.id ? 'text-white' : 'text-emerald-400'}"></i>
-                        <span class="truncate">${item.name}</span>
-                    </button>
-                `).join('');
-            }
-
-            toggleSidebar() {
-                const sidebar = document.getElementById('sidebar');
-                sidebar.classList.toggle('-translate-x-full');
-            }
-
-            toggleNotifications() {
-                const dropdown = document.getElementById('notif-dropdown');
-                dropdown.classList.toggle('hidden');
-                const list = document.getElementById('notif-list');
-                list.innerHTML = appState.notifications.map(n => `
-                    <div class="p-3 hover:bg-slate-700/40 transition cursor-pointer">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="font-bold text-white">${n.title}</span>
-                            <span class="text-[10px] text-slate-400">${n.time}</span>
-                        </div>
-                        <p class="text-slate-300">${n.desc}</p>
-                    </div>
-                `).join('');
-            }
-
-            navigateTo(viewId) {
-                appState.currentView = viewId;
-                this.renderSidebar();
-                if(window.innerWidth < 1024) {
-                    document.getElementById('sidebar').classList.add('-translate-x-full');
-                }
-                this.renderView();
-            }
-
-            renderView() {
-                const container = document.getElementById('view-container');
-                switch(appState.currentView) {
-                    case 'dashboard': container.innerHTML = this.getDashboardHTML(); break;
-                    case 'sasaran-mutu': container.innerHTML = this.getSasaranMutuHTML(); break;
-                    case 'assets': container.innerHTML = this.getAssetsHTML(); break;
-                    case 'mechanical': container.innerHTML = this.getMechanicalHTML(); break;
-                    case 'electrical': container.innerHTML = this.getElectricalHTML(); break;
-                    case 'automotive': container.innerHTML = this.getAutomotiveHTML(); break;
-                    case 'preventive': container.innerHTML = this.getPreventiveHTML(); break;
-                    case 'corrective': container.innerHTML = this.getCorrectiveHTML(); break;
-                    case 'workorders': container.innerHTML = this.getWorkOrdersHTML(); break;
-                    case 'inspection': container.innerHTML = this.getInspectionHTML(); break;
-                    case 'planning': container.innerHTML = this.getPlanningHTML(); break;
-                    case 'spareparts': container.innerHTML = this.getSparepartsHTML(); break;
-                    case 'documents': container.innerHTML = this.getDocumentsHTML(); break;
-                    case 'analytics': container.innerHTML = this.getAnalyticsHTML(); break;
-                    case 'reports': container.innerHTML = this.getReportsHTML(); break;
-                    case 'settings': container.innerHTML = this.getSettingsHTML(); break;
-                    default: container.innerHTML = `<div class="p-6 text-center text-slate-400">Modul sedang dimuat...</div>`;
-                }
-            }
-
-            // --- STREAMING_CHUNK:Rendering Dashboard Utama ---
-            getDashboardHTML() {
-                return `
-                    <div class="space-y-6">
-                        <!-- Header & Quick Actions -->
-                        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl">
-                            <div>
-                                <span class="bg-emerald-500/20 text-emerald-400 text-xs px-3 py-1 rounded-full font-semibold uppercase tracking-wider">CMMS Control Center</span>
-                                <h2 class="text-2xl font-bold text-white mt-2">ENGINEERING & MAINTENANCE MANAGEMENT PT.SWASA</h2>
-                                <p class="text-xs text-slate-400 mt-1">Sistem Manajemen Perawatan Mesin, Fasilitas, dan Kendaraan Terpadu & Profesional.</p>
-                            </div>
-                            <div class="flex flex-wrap gap-2">
-                                <button onclick="app.openModal('Buat Work Order Baru', app.getWOFormHTML())" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl font-semibold text-xs flex items-center space-x-2 transition shadow-lg shadow-emerald-900/30">
-                                    <i class="fa-solid fa-plus"></i><span>Buat WO</span>
-                                </button>
-                                <button onclick="app.openModal('Lapor Kerusakan / Breakdown', app.getBreakdownFormHTML())" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2.5 rounded-xl font-semibold text-xs flex items-center space-x-2 transition shadow-lg shadow-red-900/30">
-                                    <i class="fa-solid fa-triangle-exclamation"></i><span>Lapor Breakdown</span>
-                                </button>
-                                <button onclick="app.openModal('Tambah Asset Baru', app.getAssetFormHTML())" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2.5 rounded-xl font-semibold text-xs flex items-center space-x-2 transition">
-                                    <i class="fa-solid fa-server"></i><span>Tambah Asset</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Top Metric Cards -->
-                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700/80 shadow-lg relative overflow-hidden">
-                                <div class="absolute right-3 top-3 text-emerald-500/20 text-3xl"><i class="fa-solid fa-server"></i></div>
-                                <span class="text-xs text-slate-400 font-medium">TOTAL ASSET</span>
-                                <h3 class="text-2xl font-bold text-white mt-1">48 Units</h3>
-                                <div class="mt-2 text-[10px] text-emerald-400 font-semibold"><i class="fa-solid fa-arrow-up"></i> 100% Operational</div>
-                            </div>
-                            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700/80 shadow-lg relative overflow-hidden">
-                                <div class="absolute right-3 top-3 text-blue-500/20 text-3xl"><i class="fa-solid fa-clipboard-list"></i></div>
-                                <span class="text-xs text-slate-400 font-medium">TOTAL WORK ORDER</span>
-                                <h3 class="text-2xl font-bold text-white mt-1">142</h3>
-                                <div class="mt-2 text-[10px] text-blue-400 font-semibold">Active: 12 Tasks</div>
-                            </div>
-                            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700/80 shadow-lg relative overflow-hidden">
-                                <div class="absolute right-3 top-3 text-amber-500/20 text-3xl"><i class="fa-solid fa-calendar-check"></i></div>
-                                <span class="text-xs text-slate-400 font-medium">PREVENTIVE PM</span>
-                                <h3 class="text-2xl font-bold text-white mt-1">96%</h3>
-                                <div class="mt-2 text-[10px] text-amber-400 font-semibold">Compliance Rate</div>
-                            </div>
-                            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700/80 shadow-lg relative overflow-hidden">
-                                <div class="absolute right-3 top-3 text-red-500/20 text-3xl"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                                <span class="text-xs text-slate-400 font-medium">BREAKDOWN</span>
-                                <h3 class="text-2xl font-bold text-red-400 mt-1">1 Unit</h3>
-                                <div class="mt-2 text-[10px] text-red-400 font-semibold">Critical Priority</div>
-                            </div>
-                            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700/80 shadow-lg relative overflow-hidden col-span-2 md:col-span-1">
-                                <div class="absolute right-3 top-3 text-purple-500/20 text-3xl"><i class="fa-solid fa-heart-pulse"></i></div>
-                                <span class="text-xs text-slate-400 font-medium">EQUIPMENT HEALTH</span>
-                                <h3 class="text-2xl font-bold text-emerald-400 mt-1">94.8%</h3>
-                                <div class="mt-2 text-[10px] text-emerald-400 font-semibold">MTBF: 340 Hrs</div>
-                            </div>
-                        </div>
-
-                        <!-- Core Interactive Sections & Quick Answers -->
-                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            <!-- Q1: Apa yang harus dirawat? -->
-                            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl flex flex-col justify-between">
-                                <div>
-                                    <div class="flex items-center justify-between mb-4">
-                                        <h4 class="font-bold text-sm text-white flex items-center space-x-2">
-                                            <i class="fa-solid fa-calendar-days text-emerald-400"></i>
-                                            <span>1. Jadwal Perawatan (PM)</span>
-                                        </h4>
-                                        <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-md">Hari Ini</span>
-                                    </div>
-                                    <div class="space-y-3 text-xs">
-                                        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700/50 flex justify-between items-center">
-                                            <div>
-                                                <p class="font-bold text-white">Main Compressor Atlas Copco</p>
-                                                <p class="text-slate-400 text-[10px]">Bulanan PM &bull; Teknisi: Andi Pratama</p>
-                                            </div>
-                                            <span class="px-2 py-1 rounded bg-blue-500/20 text-blue-400 font-semibold text-[10px]">Planned</span>
-                                        </div>
-                                        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700/50 flex justify-between items-center">
-                                            <div>
-                                                <p class="font-bold text-white">Transformer Utama 1000kVA</p>
-                                                <p class="text-slate-400 text-[10px]">3 Bulanan &bull; Teknisi: Slamet Riyadi</p>
-                                            </div>
-                                            <span class="px-2 py-1 rounded bg-amber-500/20 text-amber-400 font-semibold text-[10px]">In Progress</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <button onclick="app.navigateTo('preventive')" class="mt-4 w-full py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs font-semibold transition">Lihat Seluruh PM</button>
-                            </div>
-
-                            <!-- Q2: Apa yang sedang rusak / dikerjakan? -->
-                            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl flex flex-col justify-between">
-                                <div>
-                                    <div class="flex items-center justify-between mb-4">
-                                        <h4 class="font-bold text-sm text-white flex items-center space-x-2">
-                                            <i class="fa-solid fa-triangle-exclamation text-red-400"></i>
-                                            <span>2. Kerusakan & Breakdown</span>
-                                        </h4>
-                                        <span class="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-md">Critical</span>
-                                    </div>
-                                    <div class="space-y-3 text-xs">
-                                        <div class="bg-red-950/20 p-3 rounded-xl border border-red-900/40 flex justify-between items-center">
-                                            <div>
-                                                <p class="font-bold text-red-300">CNC Milling Mazak 5-Axis</p>
-                                                <p class="text-slate-400 text-[10px]">Spindle Overload &bull; Durasi: 4.5 Jam</p>
-                                            </div>
-                                            <span class="px-2 py-1 rounded bg-red-500/20 text-red-400 font-semibold text-[10px]">Breakdown</span>
-                                        </div>
-                                        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700/50 flex justify-between items-center">
-                                            <div>
-                                                <p class="font-bold text-white">Chiller HVAC Central</p>
-                                                <p class="text-slate-400 text-[10px]">Low Refrigerant &bull; Teknisi: Slamet</p>
-                                            </div>
-                                            <span class="px-2 py-1 rounded bg-emerald-500/20 text-emerald-400 font-semibold text-[10px]">Completed</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <button onclick="app.navigateTo('corrective')" class="mt-4 w-full py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs font-semibold transition">Kelola Work Order & Perbaikan</button>
-                            </div>
-
-                            <!-- Q3: Apa yang harus dikerjakan berikutnya? -->
-                            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl flex flex-col justify-between">
-                                <div>
-                                    <div class="flex items-center justify-between mb-4">
-                                        <h4 class="font-bold text-sm text-white flex items-center space-x-2">
-                                            <i class="fa-solid fa-list-check text-blue-400"></i>
-                                            <span>3. Planning & Inspection Next</span>
-                                        </h4>
-                                        <span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-md">Schedule</span>
-                                    </div>
-                                    <div class="space-y-3 text-xs">
-                                        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700/50 flex justify-between items-center">
-                                            <div>
-                                                <p class="font-bold text-white">Checklist Panel LVMDP Utama</p>
-                                                <p class="text-slate-400 text-[10px]">Inspeksi Harian Electrical</p>
-                                            </div>
-                                            <span class="px-2 py-1 rounded bg-blue-500/20 text-blue-400 font-semibold text-[10px]">Scheduled</span>
-                                        </div>
-                                        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700/50 flex justify-between items-center">
-                                            <div>
-                                                <p class="font-bold text-white">Service Berkala Forklift #02</p>
-                                                <p class="text-slate-400 text-[10px]">Oli & Filter Change</p>
-                                            </div>
-                                            <span class="px-2 py-1 rounded bg-purple-500/20 text-purple-400 font-semibold text-[10px]">Assigned</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <button onclick="app.navigateTo('planning')" class="mt-4 w-full py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs font-semibold transition">Buka Planning & Kanban</button>
-                            </div>
-                        </div>
-
-                        <!-- Recent Asset Table Summary -->
-                        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="font-bold text-sm text-white"><i class="fa-solid fa-server text-emerald-400 mr-2"></i>Status Kritis Equipment Utama</h3>
-                                <button onclick="app.navigateTo('assets')" class="text-xs text-emerald-400 hover:underline">Lihat Semua Asset</button>
-                            </div>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left text-xs text-slate-300">
-                                    <thead class="bg-slate-900 text-slate-400 uppercase text-[10px]">
-                                        <tr>
-                                            <th class="p-3">Asset ID</th>
-                                            <th class="p-3">Nama Equipment</th>
-                                            <th class="p-3">Kategori</th>
-                                            <th class="p-3">Lokasi</th>
-                                            <th class="p-3">Kondisi</th>
-                                            <th class="p-3">Criticality</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-slate-700">
-                                        ${appState.assets.map(a => `
-                                            <tr class="hover:bg-slate-700/40">
-                                                <td class="p-3 font-mono text-emerald-400">${a.id}</td>
-                                                <td class="p-3 font-semibold text-white">${a.name}</td>
-                                                <td class="p-3">${a.category}</td>
-                                                <td class="p-3">${a.location}</td>
-                                                <td class="p-3">
-                                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${a.condition === 'Good' ? 'bg-emerald-500/20 text-emerald-400' : a.condition === 'Attention' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'}">
-                                                        ${a.condition}
-                                                    </span>
-                                                </td>
-                                                <td class="p-3 font-medium">${a.criticality}</td>
-                                            </tr>
-                                        `).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            // --- STREAMING_CHUNK:Rendering Sasaran Mutu Dashboard ---
-            getSasaranMutuHTML() {
-                return `
-                    <div class="space-y-6">
-                        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex justify-between items-center">
-                            <div>
-                                <span class="bg-emerald-500/20 text-emerald-400 text-xs px-3 py-1 rounded-full font-semibold">Quality Objective Monitoring</span>
-                                <h2 class="text-2xl font-bold text-white mt-2">SASARAN MUTU MAINTENANCE PT.SWASA</h2>
-                                <p class="text-xs text-slate-400 mt-1">Indikator Kinerja Utama Perawatan dan Perbaikan Equipment</p>
-                            </div>
-                            <button onclick="app.exportData('Sasaran_Mutu')" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center space-x-2">
-                                <i class="fa-solid fa-download"></i><span>Export Laporan Mutu</span>
-                            </button>
-                        </div>
-
-                        <!-- Perawatan Metrics -->
-                        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl">
-                            <h3 class="font-bold text-sm text-white mb-4 flex items-center space-x-2">
-                                <i class="fa-solid fa-shield-halved text-emerald-400"></i><span>A. PERAWATAN (PREVENTIVE & RELIABILITY)</span>
-                            </h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
-                                    <p class="text-xs text-slate-400">Preventive Maintenance Compliance</p>
-                                    <div class="flex justify-between items-end mt-2">
-                                        <h4 class="text-2xl font-bold text-white">96.5%</h4>
-                                        <span class="text-xs text-emerald-400 font-bold">Target: 95%</span>
-                                    </div>
-                                    <div class="w-full bg-slate-800 h-2 rounded-full mt-3 overflow-hidden">
-                                        <div class="bg-emerald-500 h-full w-[96.5%]"></div>
-                                    </div>
-                                </div>
-                                <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
-                                    <p class="text-xs text-slate-400">Equipment Availability</p>
-                                    <div class="flex justify-between items-end mt-2">
-                                        <h4 class="text-2xl font-bold text-white">98.2%</h4>
-                                        <span class="text-xs text-emerald-400 font-bold">Target: 97%</span>
-                                    </div>
-                                    <div class="w-full bg-slate-800 h-2 rounded-full mt-3 overflow-hidden">
-                                        <div class="bg-blue-500 h-full w-[98.2%]"></div>
-                                    </div>
-                                </div>
-                                <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
-                                    <p class="text-xs text-slate-400">MTBF (Mean Time Between Failures)</p>
-                                    <div class="flex justify-between items-end mt-2">
-                                        <h4 class="text-2xl font-bold text-white">340 Jam</h4>
-                                        <span class="text-xs text-emerald-400 font-bold">Good</span>
-                                    </div>
-                                    <p class="text-[10px] text-slate-500 mt-2">Durasi rata-rata antar kerusakan</p>
-                                </div>
-                                <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
-                                    <p class="text-xs text-slate-400">Total Inspeksi & Checklist</p>
-                                    <div class="flex justify-between items-end mt-2">
-                                        <h4 class="text-2xl font-bold text-white">428</h4>
-                                        <span class="text-xs text-emerald-400 font-bold">100% On-Track</span>
-                                    </div>
-                                    <p class="text-[10px] text-slate-500 mt-2">Panel, Mesin, Motor, Pompa</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Perbaikan Metrics -->
-                        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl">
-                            <h3 class="font-bold text-sm text-white mb-4 flex items-center space-x-2">
-                                <i class="fa-solid fa-wrench text-amber-400"></i><span>B. PERBAIKAN & CORRECTIVE MAINTENANCE</span>
-                            </h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
-                                    <p class="text-xs text-slate-400">MTTR (Mean Time To Repair)</p>
-                                    <div class="flex justify-between items-end mt-2">
-                                        <h4 class="text-2xl font-bold text-white">2.1 Jam</h4>
-                                        <span class="text-xs text-emerald-400 font-bold">Target < 3 Jam</span>
-                                    </div>
-                                    <div class="w-full bg-slate-800 h-2 rounded-full mt-3 overflow-hidden">
-                                        <div class="bg-emerald-500 h-full w-[75%]"></div>
-                                    </div>
-                                </div>
-                                <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
-                                    <p class="text-xs text-slate-400">Repeated Failure (Kerusakan Berulang)</p>
-                                    <div class="flex justify-between items-end mt-2">
-                                        <h4 class="text-2xl font-bold text-red-400">1 Kasus</h4>
-                                        <span class="text-xs text-amber-400 font-bold">Target: 0</span>
-                                    </div>
-                                    <p class="text-[10px] text-slate-500 mt-2">Memerlukan Root Cause Analysis</p>
-                                </div>
-                                <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
-                                    <p class="text-xs text-slate-400">Corrective Action Closed</p>
-                                    <div class="flex justify-between items-end mt-2">
-                                        <h4 class="text-2xl font-bold text-white">94.1%</h4>
-                                        <span class="text-xs text-emerald-400 font-bold">Target > 90%</span>
-                                    </div>
-                                    <div class="w-full bg-slate-800 h-2 rounded-full mt-3 overflow-hidden">
-                                        <div class="bg-emerald-500 h-full w-[94%]"></div>
-                                    </div>
-                                </div>
-                                <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
-                                    <p class="text-xs text-slate-400">Total Downtime Bulanan</p>
-                                    <div class="flex justify-between items-end mt-2">
-                                        <h4 class="text-2xl font-bold text-amber-400">12.5 Jam</h4>
-                                        <span class="text-xs text-emerald-400 font-bold">Under Budget</span>
-                                    </div>
-                                    <p class="text-[10px] text-slate-500 mt-2">Seluruh lini produksi</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            // --- STREAMING_CHUNK:Rendering Assets & Equipment Modul ---
-            getAssetsHTML() {
-                return `
-                    <div class="space-y-6">
-                        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <div>
-                                <span class="bg-emerald-500/20 text-emerald-400 text-xs px-3 py-1 rounded-full font-semibold">Asset Register</span>
-                                <h2 class="text-2xl font-bold text-white mt-2">MANAJEMEN ASSET & EQUIPMENT PT.SWASA</h2>
-                                <p class="text-xs text-slate-400 mt-1">Daftar lengkap mesin, panel, motor, pompa, dan kendaraan.</p>
-                            </div>
-                            <button onclick="app.openModal('Tambah Asset Baru', app.getAssetFormHTML())" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl font-semibold text-xs flex items-center space-x-2">
-                                <i class="fa-solid fa-plus"></i><span>Tambah Asset</span>
-                            </button>
-                        </div>
-
-                        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl">
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left text-xs text-slate-300">
-                                    <thead class="bg-slate-900 text-slate-400 uppercase text-[10px]">
-                                        <tr>
-                                            <th class="p-3">Asset ID</th>
-                                            <th class="p-3">Nama Equipment</th>
-                                            <th class="p-3">Kategori</th>
-                                            <th class="p-3">Lokasi</th>
-                                            <th class="p-3">Serial No</th>
-                                            <th class="p-3">Running Hours</th>
-                                            <th class="p-3">Kondisi</th>
-                                            <th class="p-3">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-slate-700">
-                                        ${appState.assets.map(a => `
-                                            <tr class="hover:bg-slate-700/40">
-                                                <td class="p-3 font-mono text-emerald-400">${a.id}</td>
-                                                <td class="p-3 font-semibold text-white">${a.name}</td>
-                                                <td class="p-3">${a.category}</td>
-                                                <td class="p-3">${a.location}</td>
-                                                <td class="p-3 font-mono text-slate-400">${a.serial}</td>
-                                                <td class="p-3 font-mono">${a.hours} Jam</td>
-                                                <td class="p-3">
-                                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${a.condition === 'Good' ? 'bg-emerald-500/20 text-emerald-400' : a.condition === 'Attention' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'}">
-                                                        ${a.condition}
-                                                    </span>
-                                                </td>
-                                                <td class="p-3">
-                                                    <button onclick="app.showAssetDetail('${a.id}')" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded-lg text-[10px] font-semibold">Detail</button>
-                                                </td>
-                                            </tr>
-                                        `).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            // --- STREAMING_CHUNK:Rendering Mechanical & Electrical Modules ---
-            getMechanicalHTML() {
-                return `
-                    <div class="space-y-6">
-                        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex justify-between items-center">
-                            <div>
-                                <span class="bg-emerald-500/20 text-emerald-400 text-xs px-3 py-1 rounded-full font-semibold">Mechanical Maintenance</span>
-                                <h2 class="text-2xl font-bold text-white mt-2">MODUL PERAWATAN MECHANICAL PT.SWASA</h2>
-                                <p class="text-xs text-slate-400 mt-1">Engine, Pump, Compressor, Gearbox, Bearing, Belt, Hydraulic, Overhaul.</p>
-                            </div>
-                            <button onclick="app.exportData('Mechanical')" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center space-x-2">
-                                <i class="fa-solid fa-file-excel"></i><span>Export CSV</span>
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700">
-                                <h3 class="font-bold text-sm text-white mb-2"><i class="fa-solid fa-gear text-emerald-400 mr-2"></i>Kompresor & Pompa</h3>
-                                <p class="text-xs text-slate-400 mb-4">Perawatan rutin pelumasan, seal, dan tekanan.</p>
-                                <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded">Status: 100% Normal</span>
-                            </div>
-                            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700">
-                                <h3 class="font-bold text-sm text-white mb-2"><i class="fa-solid fa-link text-emerald-400 mr-2"></i>Belt & Chain Drive</h3>
-                                <p class="text-xs text-slate-400 mb-4">Cek ketegangan, keausan, dan alignment pulley.</p>
-                                <span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">Status: Terjadwal Mingguan</span>
-                            </div>
-                            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700">
-                                <h3 class="font-bold text-sm text-white mb-2"><i class="fa-solid fa-droplet text-emerald-400 mr-2"></i>Lubrication & Oil</h3>
-                                <p class="text-xs text-slate-400 mb-4">Pelumasan berkala bearing dan gearbox.</p>
-                                <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded">Status: On-Track</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            getElectricalHTML() {
-                return `
-                    <div class="space-y-6">
-                        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex justify-between items-center">
-                            <div>
-                                <span class="bg-blue-500/20 text-blue-400 text-xs px-3 py-1 rounded-full font-semibold">Electrical Maintenance</span>
-                                <h2 class="text-2xl font-bold text-white mt-2">MODUL PERAWATAN ELECTRICAL PT.SWASA</h2>
-                                <p class="text-xs text-slate-400 mt-1">LVMDP, SDP, MCC, Transformer, Generator, Grounding, Insulation Test.</p>
-                            </div>
-                            <button onclick="app.exportData('Electrical')" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center space-x-2">
-                                <i class="fa-solid fa-file-pdf"></i><span>Export PDF</span>
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700">
-                                <h3 class="font-bold text-sm text-white mb-2"><i class="fa-solid fa-bolt text-blue-400 mr-2"></i>Panel LVMDP & MCC</h3>
-                                <p class="text-xs text-slate-400 mb-4">Pengukuran tegangan, arus, temperatur busbar, dan thermography.</p>
-                                <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded">Normal &bull; 380V / 50Hz</span>
-                            </div>
-                            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700">
-                                <h3 class="font-bold text-sm text-white mb-2"><i class="fa-solid fa-plug text-blue-400 mr-2"></i>Transformer Utama</h3>
-                                <p class="text-xs text-slate-400 mb-4">Pemeriksaan level oli trafo, silica gel, dan tahanan isolasi.</p>
-                                <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded">Insulation: > 500 MOhm</span>
-                            </div>
-                            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700">
-                                <h3 class="font-bold text-sm text-white mb-2"><i class="fa-solid fa-tower-broadcast text-blue-400 mr-2"></i>Grounding & Lightning</h3>
-                                <p class="text-xs text-slate-400 mb-4">Pengukuran nilai tahanan pentanahan (Grounding < 1 Ohm).</p>
-                                <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded">Result: 0.42 Ohm (Good)</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            getAutomotiveHTML() {
-                return `
-                    <div class="space-y-6">
-                        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex justify-between items-center">
-                            <div>
-                                <span class="bg-purple-500/20 text-purple-400 text-xs px-3 py-1 rounded-full font-semibold">Automotive & Fleet</span>
-                                <h2 class="text-2xl font-bold text-white mt-2">ARMADA KENDARAAN & FORKLIFT PT.SWASA</h2>
-                                <p class="text-xs text-slate-400 mt-1">Mobil operasional, truck, forklift, dan alat berat.</p>
-                            </div>
-                            <button onclick="app.openModal('Tambah Kendaraan', app.getAssetFormHTML())" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl text-xs font-semibold">Tambah Armada</button>
-                        </div>
-                        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl">
-                            <table class="w-full text-left text-xs text-slate-300">
-                                <thead class="bg-slate-900 text-slate-400 uppercase text-[10px]">
-                                    <tr>
-                                        <th class="p-3">Nomor Polisi / ID</th>
-                                        <th class="p-3">Kendaraan</th>
-                                        <th class="p-3">Driver / Penanggung Jawab</th>
-                                        <th class="p-3">Kilometer (KM)</th>
-                                        <th class="p-3">Jadwal Service</th>
-                                        <th class="p-3">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-700">
-                                    <tr>
-                                        <td class="p-3 font-mono text-purple-400">B 9182 SW</td>
-                                        <td class="p-3 font-semibold text-white">Truck Box Isuzu Elf</td>
-                                        <td class="p-3">Sutrisno</td>
-                                        <td class="p-3 font-mono">45,210 KM</td>
-                                        <td class="p-3">2026-10-15</td>
-                                        <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400">Ready</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="p-3 font-mono text-purple-400">FL-3T-02</td>
-                                        <td class="p-3 font-semibold text-white">Forklift Toyota 3T</td>
-                                        <td class="p-3">Ahmad Supriyadi</td>
-                                        <td class="p-3 font-mono">1,950 Hours</td>
-                                        <td class="p-3">2026-10-08</td>
-                                        <td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400">Service Due</span></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                `;
-            }
-
-            getPreventiveHTML() {
-                return `
-                    <div class="space-y-6">
-                        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex justify-between items-center">
-                            <div>
-                                <span class="bg-emerald-500/20 text-emerald-400 text-xs px-3 py-1 rounded-full font-semibold">Preventive Maintenance</span>
-                                <h2 class="text-2xl font-bold text-white mt-2">JADWAL PERAWATAN BERKALA (PM)</h2>
-                                <p class="text-xs text-slate-400 mt-1">Harian, Mingguan, Bulanan, 3-6 Bulanan, dan Tahunan.</p>
-                            </div>
-                            <button onclick="app.openModal('Buat Jadwal PM', app.getPMFormHTML())" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl font-semibold text-xs">Tambah PM</button>
-                        </div>
-                        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl">
-                            <table class="w-full text-left text-xs text-slate-300">
-                                <thead class="bg-slate-900 text-slate-400 uppercase text-[10px]">
-                                    <tr>
-                                        <th class="p-3">PM Number</th>
-                                        <th class="p-3">Equipment</th>
-                                        <th class="p-3">Jenis PM</th>
-                                        <th class="p-3">Jadwal</th>
-                                        <th class="p-3">Teknisi</th>
-                                        <th class="p-3">Supervisor</th>
-                                        <th class="p-3">Status</th>
-                                        <th class="p-3">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-700">
-                                    ${appState.preventive.map(pm => `
-                                        <tr>
-                                            <td class="p-3 font-mono text-emerald-400">${pm.id}</td>
-                                            <td class="p-3 font-semibold text-white">${pm.asset}</td>
-                                            <td class="p-3">${pm.type}</td>
-                                            <td class="p-3 font-mono">${pm.schedule}</td>
-                                            <td class="p-3">${pm.technician}</td>
-                                            <td class="p-3">${pm.supervisor}</td>
-                                            <td class="p-3"><span class="px-2 py-0.5 rounded font-bold ${pm.status === 'Completed' ? 'bg-emerald-500/20 text-emerald-400' : pm.status === 'In Progress' ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-400'}">${pm.status}</span></td>
-                                            <td class="p-3"><button onclick="app.showNotification('PM Berhasil Diverifikasi', 'success')" class="bg-slate-700 hover:bg-slate-600 text-white px-2.5 py-1 rounded text-[10px]">Verifikasi</button></td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                `;
-            }
-
-            getCorrectiveHTML() {
-                return `
-                    <div class="space-y-6">
-                        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex justify-between items-center">
-                            <div>
-                                <span class="bg-red-500/20 text-red-400 text-xs px-3 py-1 rounded-full font-semibold">Corrective & Breakdown</span>
-                                <h2 class="text-2xl font-bold text-white mt-2">PERBAIKAN KERUSAKAN & EMERGENCY BREAKDOWN</h2>
-                                <p class="text-xs text-slate-400 mt-1">Penanganan kerusakan darurat, analisis akar masalah (RCA), dan tindakan perbaikan.</p>
-                            </div>
-                            <button onclick="app.openModal('Lapor Breakdown', app.getBreakdownFormHTML())" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2.5 rounded-xl font-semibold text-xs">Lapor Kerusakan Baru</button>
-                        </div>
-                        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl">
-                            <table class="w-full text-left text-xs text-slate-300">
-                                <thead class="bg-slate-900 text-slate-400 uppercase text-[10px]">
-                                    <tr>
-                                        <th class="p-3">CM ID</th>
-                                        <th class="p-3">Equipment</th>
-                                        <th class="p-3">Gejala Kerusakan</th>
-                                        <th class="p-3">Penyebab (Root Cause)</th>
-                                        <th class="p-3">Teknisi</th>
-                                        <th class="p-3">Downtime</th>
-                                        <th class="p-3">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-700">
-                                    ${appState.corrective.map(cm => `
-                                        <tr>
-                                            <td class="p-3 font-mono text-red-400">${cm.id}</td>
-                                            <td class="p-3 font-semibold text-white">${cm.asset}</td>
-                                            <td class="p-3">${cm.issue}</td>
-                                            <td class="p-3 text-slate-400">${cm.cause}</td>
-                                            <td class="p-3">${cm.technician}</td>
-                                            <td class="p-3 font-mono">${cm.downtime}</td>
-                                            <td class="p-3"><span class="px-2 py-0.5 rounded font-bold ${cm.status === 'Closed' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}">${cm.status}</span></td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                `;
-            }
-
-            getWorkOrdersHTML() {
-                return `
-                    <div class="space-y-6">
-                        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex justify-between items-center">
-                            <div>
-                                <span class="bg-blue-500/20 text-blue-400 text-xs px-3 py-1 rounded-full font-semibold">Work Order System</span>
-                                <h2 class="text-2xl font-bold text-white mt-2">MANAJEMEN WORK ORDER (WO) PT.SWASA</h2>
-                                <p class="text-xs text-slate-400 mt-1">Pencatatan perintah kerja teknisi, spare part, dan approval supervisor.</p>
-                            </div>
-                            <button onclick="app.openModal('Buat Work Order Baru', app.getWOFormHTML())" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl font-semibold text-xs">Buat WO</button>
-                        </div>
-                        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl">
-                            <table class="w-full text-left text-xs text-slate-300">
-                                <thead class="bg-slate-900 text-slate-400 uppercase text-[10px]">
-                                    <tr>
-                                        <th class="p-3">WO Number</th>
-                                        <th class="p-3">Tanggal</th>
-                                        <th class="p-3">Requester</th>
-                                        <th class="p-3">Equipment</th>
-                                        <th class="p-3">Jenis</th>
-                                        <th class="p-3">Prioritas</th>
-                                        <th class="p-3">Teknisi</th>
-                                        <th class="p-3">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-700">
-                                    ${appState.workOrders.map(wo => `
-                                        <tr>
-                                            <td class="p-3 font-mono text-blue-400">${wo.id}</td>
-                                            <td class="p-3 font-mono">${wo.date}</td>
-                                            <td class="p-3">${wo.requester}</td>
-                                            <td class="p-3 font-semibold text-white">${wo.equipment}</td>
-                                            <td class="p-3">${wo.type}</td>
-                                            <td class="p-3"><span class="px-2 py-0.5 rounded font-bold bg-amber-500/20 text-amber-400">${wo.priority}</span></td>
-                                            <td class="p-3">${wo.technician}</td>
-                                            <td class="p-3"><span class="px-2 py-0.5 rounded font-bold bg-blue-500/20 text-blue-400">${wo.status}</span></td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                `;
-            }
-
-            getInspectionHTML() {
-                return `
-                    <div class="space-y-6">
-                        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex justify-between items-center">
-                            <div>
-                                <span class="bg-emerald-500/20 text-emerald-400 text-xs px-3 py-1 rounded-full font-semibold">Inspection & Checklist</span>
-                                <h2 class="text-2xl font-bold text-white mt-2">CHECKLIST DIGITAL & INSPEKSI LAPANGAN</h2>
-                                <p class="text-xs text-slate-400 mt-1">Pemeriksaan harian panel, mesin, genset dengan pilihan OK, Attention, atau NG (Not Good).</p>
-                            </div>
-                            <button onclick="app.showNotification('Checklist Tersimpan & Otomatis ke WO jika NG', 'success')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl font-semibold text-xs">Simpan Checklist</button>
-                        </div>
-                        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl space-y-4">
-                            <h3 class="font-bold text-sm text-white">Checklist Rutin Harian: Panel LVMDP Utama</h3>
-                            <div class="space-y-2 text-xs">
-                                <div class="bg-slate-900 p-3 rounded-xl flex justify-between items-center">
-                                    <span>1. Suhu Busbar & Breaker utama dalam batas normal (< 65°C)</span>
-                                    <div class="space-x-2">
-                                        <label><input type="radio" name="chk1" checked class="text-emerald-500"> OK</label>
-                                        <label><input type="radio" name="chk1" class="text-amber-500"> Attention</label>
-                                        <label><input type="radio" name="chk1" class="text-red-500"> NG</label>
-                                    </div>
-                                </div>
-                                <div class="bg-slate-900 p-3 rounded-xl flex justify-between items-center">
-                                    <span>2. Indikator lampu Pilot Phase R-S-T menyala normal</span>
-                                    <div class="space-x-2">
-                                        <label><input type="radio" name="chk2" checked class="text-emerald-500"> OK</label>
-                                        <label><input type="radio" name="chk2" class="text-amber-500"> Attention</label>
-                                        <label><input type="radio" name="chk2" class="text-red-500"> NG</label>
-                                    </div>
-                                </div>
-                                <div class="bg-slate-900 p-3 rounded-xl flex justify-between items-center">
-                                    <span>3. Kebersihan panel dari debu dan serangga</span>
-                                    <div class="space-x-2">
-                                        <label><input type="radio" name="chk3" checked class="text-emerald-500"> OK</label>
-                                        <label><input type="radio" name="chk3" class="text-amber-500"> Attention</label>
-                                        <label><input type="radio" name="chk3" class="text-red-500"> NG</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            getPlanningHTML() {
-                return `
-                    <div class="space-y-6">
-                        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex justify-between items-center">
-                            <div>
-                                <span class="bg-purple-500/20 text-purple-400 text-xs px-3 py-1 rounded-full font-semibold">Maintenance Planning</span>
-                                <h2 class="text-2xl font-bold text-white mt-2">KALENDER & PLANNING MINGGUAN</h2>
-                                <p class="text-xs text-slate-400 mt-1">Penjadwalan teknisi, durasi pekerjaan, dan alokasi resource.</p>
-                            </div>
-                            <button onclick="app.showNotification('Jadwal planning diperbarui', 'success')" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2.5 rounded-xl font-semibold text-xs">Tambah Jadwal</button>
-                        </div>
-                        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
-                                <h4 class="font-bold text-white text-xs mb-3 border-b border-slate-800 pb-2">📅 SENIN - SELASA</h4>
-                                <ul class="space-y-2 text-xs text-slate-300">
-                                    <li class="bg-slate-800 p-2 rounded border border-slate-700">PM Kompresor Utama (Andi)</li>
-                                    <li class="bg-slate-800 p-2 rounded border border-slate-700">Checklist Panel (Slamet)</li>
-                                </ul>
-                            </div>
-                            <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
-                                <h4 class="font-bold text-white text-xs mb-3 border-b border-slate-800 pb-2">📅 RABU - KAMIS</h4>
-                                <ul class="space-y-2 text-xs text-slate-300">
-                                    <li class="bg-slate-800 p-2 rounded border border-slate-700">Overhaul Pompa Centrifugal (Joko)</li>
-                                    <li class="bg-slate-800 p-2 rounded border border-slate-700">Service Forklift #02 (Doni)</li>
-                                </ul>
-                            </div>
-                            <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
-                                <h4 class="font-bold text-white text-xs mb-3 border-b border-slate-800 pb-2">📅 JUMAT - SABTU</h4>
-                                <ul class="space-y-2 text-xs text-slate-300">
-                                    <li class="bg-slate-800 p-2 rounded border border-slate-700">Kalibrasi Sensor & Instrumentasi</li>
-                                    <li class="bg-slate-800 p-2 rounded border border-slate-700">Housekeeping Workshop Engineering</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            getSparepartsHTML() {
-                return `
-                    <div class="space-y-6">
-                        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex justify-between items-center">
-                            <div>
-                                <span class="bg-emerald-500/20 text-emerald-400 text-xs px-3 py-1 rounded-full font-semibold">Spare Part & Inventory</span>
-                                <h2 class="text-2xl font-bold text-white mt-2">GUDANG SPARE PART & MATERIAL PT.SWASA</h2>
-                                <p class="text-xs text-slate-400 mt-1">Stok spare part, minimum level alert, dan riwayat pemakaian.</p>
-                            </div>
-                            <button onclick="app.openModal('Tambah Sparepart', app.getSparepartFormHTML())" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl font-semibold text-xs">Tambah Barang</button>
-                        </div>
-                        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl">
-                            <table class="w-full text-left text-xs text-slate-300">
-                                <thead class="bg-slate-900 text-slate-400 uppercase text-[10px]">
-                                    <tr>
-                                        <th class="p-3">Part Code</th>
-                                        <th class="p-3">Nama Spare Part</th>
-                                        <th class="p-3">Kategori</th>
-                                        <th class="p-3">Lokasi Rak</th>
-                                        <th class="p-3">Stok</th>
-                                        <th class="p-3">Min Stok</th>
-                                        <th class="p-3">Harga Satuan</th>
-                                        <th class="p-3">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-700">
-                                    ${appState.spareparts.map(sp => `
-                                        <tr>
-                                            <td class="p-3 font-mono text-emerald-400">${sp.code}</td>
-                                            <td class="p-3 font-semibold text-white">${sp.name}</td>
-                                            <td class="p-3">${sp.category}</td>
-                                            <td class="p-3">${sp.location}</td>
-                                            <td class="p-3 font-mono font-bold">${sp.stock}</td>
-                                            <td class="p-3 font-mono">${sp.minStock}</td>
-                                            <td class="p-3 font-mono">${sp.price}</td>
-                                            <td class="p-3">
-                                                <span class="px-2 py-0.5 rounded font-bold ${sp.stock <= sp.minStock ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}">
-                                                    ${sp.stock <= sp.minStock ? 'LOW STOCK' : 'Normal'}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                `;
-            }
-
-            getDocumentsHTML() {
-                return `
-                    <div class="space-y-6">
-                        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex justify-between items-center">
-                            <div>
-                                <span class="bg-blue-500/20 text-blue-400 text-xs px-3 py-1 rounded-full font-semibold">Documentation & QR Code</span>
-                                <h2 class="text-2xl font-bold text-white mt-2">MANUAL, DRAWING & ASSET QR CODE</h2>
-                                <p class="text-xs text-slate-400 mt-1">Scan QR Code equipment untuk langsung melihat profil, history, dan dokumen.</p>
-                            </div>
-                            <button onclick="app.showNotification('Membuka Kamera Scanner QR Code...', 'success')" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl font-semibold text-xs flex items-center space-x-2">
-                                <i class="fa-solid fa-qrcode"></i><span>Scan QR Code</span>
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 text-center space-y-3">
-                                <div class="bg-white p-4 inline-block rounded-xl">
-                                    <i class="fa-solid fa-qrcode text-6xl text-slate-900"></i>
-                                </div>
-                                <h4 class="font-bold text-white text-sm">AST-001: Main Compressor</h4>
-                                <p class="text-[10px] text-slate-400">Manual, Datasheet, & Maintenance History</p>
-                            </div>
-                            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 text-center space-y-3">
-                                <div class="bg-white p-4 inline-block rounded-xl">
-                                    <i class="fa-solid fa-qrcode text-6xl text-slate-900"></i>
-                                </div>
-                                <h4 class="font-bold text-white text-sm">AST-002: Transformer 1000kVA</h4>
-                                <p class="text-[10px] text-slate-400">Single Line Diagram & Test Report</p>
-                            </div>
-                            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 text-center space-y-3">
-                                <div class="bg-white p-4 inline-block rounded-xl">
-                                    <i class="fa-solid fa-qrcode text-6xl text-slate-900"></i>
-                                </div>
-                                <h4 class="font-bold text-white text-sm">AST-004: CNC Milling Mazak</h4>
-                                <p class="text-[10px] text-slate-400">Electrical Schematic & Manual Book</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            getAnalyticsHTML() {
-                return `
-                    <div class="space-y-6">
-                        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex justify-between items-center">
-                            <div>
-                                <span class="bg-emerald-500/20 text-emerald-400 text-xs px-3 py-1 rounded-full font-semibold">Maintenance Analytics</span>
-                                <h2 class="text-2xl font-bold text-white mt-2">ANALITIK PERFORMA & RELIABILITY</h2>
-                                <p class="text-xs text-slate-400 mt-1">Grafik MTBF, MTTR, Availability, dan Downtime bulanan.</p>
-                            </div>
-                            <button onclick="app.exportData('Analytics')" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2.5 rounded-xl text-xs font-semibold">Export Analitik</button>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700">
-                                <h4 class="font-bold text-white text-sm mb-4">Grafik Equipment Availability (%)</h4>
-                                <div class="space-y-3 text-xs">
-                                    <div>
-                                        <div class="flex justify-between mb-1"><span>Jan - Mar</span><span class="text-emerald-400 font-bold">98.5%</span></div>
-                                        <div class="w-full bg-slate-900 h-3 rounded-full overflow-hidden"><div class="bg-emerald-500 h-full w-[98.5%]"></div></div>
-                                    </div>
-                                    <div>
-                                        <div class="flex justify-between mb-1"><span>Apr - Jun</span><span class="text-emerald-400 font-bold">97.8%</span></div>
-                                        <div class="w-full bg-slate-900 h-3 rounded-full overflow-hidden"><div class="bg-emerald-500 h-full w-[97.8%]"></div></div>
-                                    </div>
-                                    <div>
-                                        <div class="flex justify-between mb-1"><span>Jul - Sep</span><span class="text-emerald-400 font-bold">99.1%</span></div>
-                                        <div class="w-full bg-slate-900 h-3 rounded-full overflow-hidden"><div class="bg-emerald-500 h-full w-[99.1%]"></div></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700">
-                                <h4 class="font-bold text-white text-sm mb-4">Preventive vs Corrective Ratio</h4>
-                                <div class="space-y-3 text-xs">
-                                    <div>
-                                        <div class="flex justify-between mb-1"><span>Preventive (Pencegahan)</span><span class="text-emerald-400 font-bold">78%</span></div>
-                                        <div class="w-full bg-slate-900 h-3 rounded-full overflow-hidden"><div class="bg-emerald-500 h-full w-[78%]"></div></div>
-                                    </div>
-                                    <div>
-                                        <div class="flex justify-between mb-1"><span>Corrective (Perbaikan)</span><span class="text-amber-400 font-bold">18%</span></div>
-                                        <div class="w-full bg-slate-900 h-3 rounded-full overflow-hidden"><div class="bg-amber-500 h-full w-[18%]"></div></div>
-                                    </div>
-                                    <div>
-                                        <div class="flex justify-between mb-1"><span>Breakdown Darurat</span><span class="text-red-400 font-bold">4%</span></div>
-                                        <div class="w-full bg-slate-900 h-3 rounded-full overflow-hidden"><div class="bg-red-500 h-full w-[4%]"></div></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            getReportsHTML() {
-                return `
-                    <div class="space-y-6">
-                        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex justify-between items-center">
-                            <div>
-                                <span class="bg-emerald-500/20 text-emerald-400 text-xs px-3 py-1 rounded-full font-semibold">Reports & Export</span>
-                                <h2 class="text-2xl font-bold text-white mt-2">PUSAT LAPORAN & EXPORT DATA</h2>
-                                <p class="text-xs text-slate-400 mt-1">Export laporan lengkap dalam format CSV, Excel, atau PDF.</p>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 flex flex-col justify-between space-y-4">
-                                <div>
-                                    <h4 class="font-bold text-white text-sm">Laporan Preventive Maintenance</h4>
-                                    <p class="text-xs text-slate-400 mt-1">Rekap seluruh jadwal dan realisasi PM bulanan.</p>
-                                </div>
-                                <div class="flex space-x-2">
-                                    <button onclick="app.exportData('PM_CSV')" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs font-semibold">CSV</button>
-                                    <button onclick="app.exportData('PM_Excel')" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold">Excel</button>
-                                    <button onclick="app.exportData('PM_PDF')" class="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold">PDF</button>
-                                </div>
-                            </div>
-                            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 flex flex-col justify-between space-y-4">
-                                <div>
-                                    <h4 class="font-bold text-white text-sm">Laporan Breakdown & Corrective</h4>
-                                    <p class="text-xs text-slate-400 mt-1">Analisis kerusakan, downtime, dan biaya perbaikan.</p>
-                                </div>
-                                <div class="flex space-x-2">
-                                    <button onclick="app.exportData('CM_CSV')" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs font-semibold">CSV</button>
-                                    <button onclick="app.exportData('CM_Excel')" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold">Excel</button>
-                                    <button onclick="app.exportData('CM_PDF')" class="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold">PDF</button>
-                                </div>
-                            </div>
-                            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 flex flex-col justify-between space-y-4">
-                                <div>
-                                    <h4 class="font-bold text-white text-sm">Laporan Sasaran Mutu</h4>
-                                    <p class="text-xs text-slate-400 mt-1">Rekap pencapaian target mutu engineering PT.SWASA.</p>
-                                </div>
-                                <div class="flex space-x-2">
-                                    <button onclick="app.exportData('Mutu_CSV')" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs font-semibold">CSV</button>
-                                    <button onclick="app.exportData('Mutu_Excel')" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold">Excel</button>
-                                    <button onclick="app.exportData('Mutu_PDF')" class="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold">PDF</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            getSettingsHTML() {
-                return `
-                    <div class="space-y-6">
-                        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex justify-between items-center">
-                            <div>
-                                <span class="bg-emerald-500/20 text-emerald-400 text-xs px-3 py-1 rounded-full font-semibold">Settings & Personnel</span>
-                                <h2 class="text-2xl font-bold text-white mt-2">PENGATURAN NAMA MEKANIK, ELEKTRIK & SPV</h2>
-                                <p class="text-xs text-slate-400 mt-1">Ubah dan isi manual nama personel sesuai kebutuhan operasional PT.SWASA.</p>
-                            </div>
-                        </div>
-                        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl space-y-6">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div class="space-y-3">
-                                    <label class="block text-xs font-bold text-slate-300 uppercase">Nama Tim Mekanik</label>
-                                    <textarea id="input-mechanics" rows="4" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white">${appState.personnel.mechanics.join('\n')}</textarea>
-                                    <p class="text-[10px] text-slate-500">Pisahkan setiap nama dengan baris baru (Enter).</p>
-                                </div>
-                                <div class="space-y-3">
-                                    <label class="block text-xs font-bold text-slate-300 uppercase">Nama Tim Elektrik</label>
-                                    <textarea id="input-electricians" rows="4" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white">${appState.personnel.electricians.join('\n')}</textarea>
-                                    <p class="text-[10px] text-slate-500">Pisahkan setiap nama dengan baris baru (Enter).</p>
-                                </div>
-                                <div class="space-y-3">
-                                    <label class="block text-xs font-bold text-slate-300 uppercase">Nama Supervisor Utility</label>
-                                    <textarea id="input-supervisors" rows="4" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white">${appState.personnel.supervisors.join('\n')}</textarea>
-                                    <p class="text-[10px] text-slate-500">Pisahkan setiap nama dengan baris baru (Enter).</p>
-                                </div>
-                            </div>
-                            <button onclick="app.savePersonnel()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-xl font-semibold text-xs shadow-lg shadow-emerald-900/30">Simpan Perubahan Personel</button>
-                        </div>
-                    </div>
-                `;
-            }
-
-            savePersonnel() {
-                const mech = document.getElementById('input-mechanics').value.split('\n').filter(Boolean);
-                const elec = document.getElementById('input-electricians').value.split('\n').filter(Boolean);
-                const spv = document.getElementById('input-supervisors').value.split('\n').filter(Boolean);
-                appState.personnel.mechanics = mech;
-                appState.personnel.electricians = elec;
-                appState.personnel.supervisors = spv;
-                this.showNotification('Data Personel Berhasil Diperbarui!', 'success');
-            }
-
-            // --- STREAMING_CHUNK:Modal Forms & Export Utility Functions ---
-            openModal(title, htmlContent) {
-                document.getElementById('modal-title').innerText = title;
-                document.getElementById('modal-body').innerHTML = htmlContent;
-                document.getElementById('global-modal').classList.remove('hidden');
-            }
-
-            closeModal() {
-                document.getElementById('global-modal').classList.add('hidden');
-            }
-
-            getWOFormHTML() {
-                return `
-                    <form onsubmit="event.preventDefault(); app.showNotification('Work Order Berhasil Dibuat!', 'success'); app.closeModal();" class="space-y-4 text-xs">
-                        <div>
-                            <label class="block text-slate-400 mb-1">Equipment / Mesin</label>
-                            <select class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white">
-                                ${appState.assets.map(a => `<option value="${a.id}">${a.name} (${a.location})</option>`).join('')}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-slate-400 mb-1">Jenis Pekerjaan</label>
-                            <select class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white">
-                                <option>Preventive Maintenance</option>
-                                <option>Corrective / Perbaikan</option>
-                                <option>Inspeksi Rutin</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-slate-400 mb-1">Teknisi Pelaksana</label>
-                            <select class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white">
-                                ${appState.personnel.mechanics.concat(appState.personnel.electricians).map(m => `<option>${m}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-slate-400 mb-1">Deskripsi Pekerjaan</label>
-                            <textarea rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white" placeholder="Jelaskan detail pekerjaan..."></textarea>
-                        </div>
-                        <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold">Simpan Work Order</button>
-                    </form>
-                `;
-            }
-
-            getBreakdownFormHTML() {
-                return `
-                    <form onsubmit="event.preventDefault(); app.showNotification('Laporan Breakdown Tercatat & Notifikasi Terkirim!', 'success'); app.closeModal();" class="space-y-4 text-xs">
-                        <div>
-                            <label class="block text-slate-400 mb-1">Equipment Bermasalah</label>
-                            <select class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white">
-                                ${appState.assets.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-slate-400 mb-1">Gejala & Kerusakan</label>
-                            <input type="text" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white" placeholder="Contoh: Motor Overheat / Trip Breaker">
-                        </div>
-                        <div>
-                            <label class="block text-slate-400 mb-1">Analisa Akar Masalah (Root Cause)</label>
-                            <textarea rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white" placeholder="Analisa penyebab..."></textarea>
-                        </div>
-                        <button type="submit" class="w-full py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold">Kirim Laporan Breakdown</button>
-                    </form>
-                `;
-            }
-
-            getAssetFormHTML() {
-                return `
-                    <form onsubmit="event.preventDefault(); app.showNotification('Asset Baru Berhasil Ditambahkan!', 'success'); app.closeModal();" class="space-y-4 text-xs">
-                        <div><label class="block text-slate-400 mb-1">Nama Asset / Mesin</label><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white" required></div>
-                        <div><label class="block text-slate-400 mb-1">Kategori</label><select class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white"><option>Mechanical</option><option>Electrical</option><option>Automotive</option><option>HVAC</option></select></div>
-                        <div><label class="block text-slate-400 mb-1">Lokasi</label><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white" required></div>
-                        <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold">Simpan Asset</button>
-                    </form>
-                `;
-            }
-
-            getPMFormHTML() {
-                return `
-                    <form onsubmit="event.preventDefault(); app.showNotification('Jadwal PM Berhasil Dibuat!', 'success'); app.closeModal();" class="space-y-4 text-xs">
-                        <div><label class="block text-slate-400 mb-1">Pilih Equipment</label><select class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white">${appState.assets.map(a => `<option>${a.name}</option>`).join('')}</select></div>
-                        <div><label class="block text-slate-400 mb-1">Jenis PM</label><select class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white"><option>Harian</option><option>Mingguan</option><option>Bulanan</option><option>3 Bulanan</option><option>Tahunan</option></select></div>
-                        <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold">Simpan Jadwal PM</button>
-                    </form>
-                `;
-            }
-
-            getSparepartFormHTML() {
-                return `
-                    <form onsubmit="event.preventDefault(); app.showNotification('Sparepart Berhasil Ditambahkan!', 'success'); app.closeModal();" class="space-y-4 text-xs">
-                        <div><label class="block text-slate-400 mb-1">Nama Spare Part</label><input type="text" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white" required></div>
-                        <div><label class="block text-slate-400 mb-1">Stok Awal</label><input type="number" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white" required></div>
-                        <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold">Simpan Sparepart</button>
-                    </form>
-                `;
-            }
-
-            showAssetDetail(id) {
-                const asset = appState.assets.find(a => a.id === id);
-                if(!asset) return;
-                this.openModal(`Detail Asset: ${asset.name}`, `
-                    <div class="space-y-4 text-xs text-slate-300">
-                        <div class="grid grid-cols-2 gap-4 bg-slate-900 p-4 rounded-xl">
-                            <div><p class="text-slate-500">Asset ID</p><p class="font-bold text-white">${asset.id}</p></div>
-                            <div><p class="text-slate-500">Kategori</p><p class="font-bold text-white">${asset.category}</p></div>
-                            <div><p class="text-slate-500">Lokasi</p><p class="font-bold text-white">${asset.location}</p></div>
-                            <div><p class="text-slate-500">Serial Number</p><p class="font-bold text-white">${asset.serial}</p></div>
-                        </div>
-                        <div class="p-4 bg-emerald-950/20 border border-emerald-900/40 rounded-xl">
-                            <h4 class="font-bold text-emerald-400 mb-1"><i class="fa-solid fa-qrcode mr-2"></i>QR Code Integrasi</h4>
-                            <p class="text-slate-400 text-[10px]">Scan QR Code ini di lapangan untuk akses cepat riwayat pemeliharaan dan manual book.</p>
-                        </div>
-                    </div>
-                `);
-            }
-
-            exportData(type) {
-                this.showNotification(`File ${type} berhasil diexport (CSV/Excel/PDF ready)!`, 'success');
-            }
-
-            showNotification(message, type='success') {
-                const container = document.getElementById('toast-container');
-                const toast = document.createElement('div');
-                toast.className = `pointer-events-auto bg-slate-800 border ${type === 'success' ? 'border-emerald-500 text-emerald-400' : 'border-red-500 text-red-400'} px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 text-xs font-semibold animate-bounce`;
-                toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation'} text-base"></i><span>${message}</span>`;
-                container.appendChild(toast);
-                setTimeout(() => toast.remove(), 3000);
-            }
-
-            setupEventListeners() {
-                document.getElementById('sidebar-toggle').addEventListener('click', () => this.toggleSidebar());
-            }
-        }
-
-        const app = new CMMSApp();
-    </script>
-</body>
-</html>
-```
+  );
+}
