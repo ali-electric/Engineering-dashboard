@@ -1,945 +1,1197 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { 
-  Wrench, Zap, Truck, Users, FileText, BarChart3, Plus, Search, Filter, 
-  Download, Edit3, Trash2, CheckCircle2, Clock, AlertTriangle, RefreshCw, 
-  Settings, Shield, Database, Calendar, UserCheck, Package, ArrowUpRight,
-  Printer, FileSpreadsheet, FileText as FilePdfIcon, Check, X, AlertCircle
-} from 'lucide-react';
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMMS Enterprise - Maintenance & Sasaran Mutu Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            950: '#020617',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+            animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @media print {
+            body { background: white !important; color: black !important; }
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 selection:bg-orange-500 selection:text-white pb-12">
 
-const INITIAL_TECHNICIANS = [
-  { id: 'TECH-001', name: 'Budi Santoso', specialty: 'Mekanik', contact: '+62 812-3456-7890', status: 'Aktif' },
-  { id: 'TECH-002', name: 'Ahmad Fauzi', specialty: 'Elektrik', contact: '+62 813-9876-5432', status: 'Tugas' },
-  { id: 'TECH-003', name: 'Joko Widodo', specialty: 'Otomotif', contact: '+62 821-5555-4433', status: 'Aktif' },
-  { id: 'TECH-004', name: 'Siti Rahma', specialty: 'Elektrik', contact: '+62 856-7788-9900', status: 'Aktif' },
-];
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
 
-const INITIAL_REPORTS = [
-  {
-    id: 'REP-2026-001',
-    timestampStart: '2026-10-01T08:00',
-    timestampEnd: '2026-10-01T12:30',
-    duration: '4j 30m',
-    technician: 'Budi Santoso',
-    category: 'Mekanik',
-    activityType: 'Corrective',
-    damageDetail: 'Main Conveyor Belt slip parah pada pulley penggerak utama line 3.',
-    actionTaken: 'Penggantian V-Belt tipe B-120 dan penyetelan ulang ketegangan pulley.',
-    nextPlanning: 'Pemeriksaan rutin ketegangan belt setiap 2 minggu sekali.',
-    usedParts: 'V-Belt B-120 (2 pcs)',
-    neededParts: 'Pulley cadangan 8 inch (1 unit)',
-    brokenParts: 'V-Belt lama aus & retak',
-    status: 'Selesai'
-  },
-  {
-    id: 'REP-2026-002',
-    timestampStart: '2026-10-02T09:15',
-    timestampEnd: '2026-10-02T11:00',
-    duration: '1j 45m',
-    technician: 'Ahmad Fauzi',
-    category: 'Elektrik',
-    activityType: 'Preventive',
-    damageDetail: 'Panel Kontrol PLC mengalami overheating akibat debu industri.',
-    actionTaken: 'Pembersihan filter exhaust fan dan pengecekan terminal kabel kontaktor.',
-    nextPlanning: 'Cleaning filter bulanan.',
-    usedParts: 'Contact Cleaner spray (1 can)',
-    neededParts: 'Filter Fan 12x12 cm (2 pcs)',
-    brokenParts: 'Filter kotor tersumbat',
-    status: 'Selesai'
-  },
-  {
-    id: 'REP-2026-003',
-    timestampStart: '2026-10-03T13:00',
-    timestampEnd: '2026-10-03T16:30',
-    duration: '3j 30m',
-    technician: 'Joko Widodo',
-    category: 'Otomotif',
-    activityType: 'Corrective',
-    damageDetail: 'Forklift Diesel #04 bocor oli hidrolik pada seal silinder mast.',
-    actionTaken: 'Penggantian seal kit hidrolik mast dan top-up oli hidrolik ISO VG 46.',
-    nextPlanning: 'Test beban 3 ton pada hari Senin.',
-    usedParts: 'Seal Kit Hidrolik Forklift (1 set), Oli Hidrolik 5L',
-    neededParts: 'Selang High Pressure (1 pcs)',
-    brokenParts: 'Seal lama robek',
-    status: 'Proses'
-  }
-];
-
-export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [technicians, setTechnicians] = useState(INITIAL_TECHNICIANS);
-  const [reports, setReports] = useState(INITIAL_REPORTS);
-  
-  // Filter & Search state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('Semua');
-  const [statusFilter, setStatusFilter] = useState('Semua');
-  
-  // Modals state
-  const [isTechModalOpen, setIsTechModalOpen] = useState(false);
-  const [editingTech, setEditingTech] = useState(null);
-  
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const [editingReport, setEditingReport] = useState(null);
-  
-  // Notification Toast state
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-
-  const showToast = (message, type = 'success') => {
-    setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3500);
-  };
-
-  const analytics = useMemo(() => {
-    const totalReports = reports.length;
-    const completed = reports.filter(r => r.status === 'Selesai').length;
-    const inProgress = reports.filter(r => r.status === 'Proses').length;
-    const preventive = reports.filter(r => r.activityType === 'Preventive').length;
-    const corrective = reports.filter(r => r.activityType === 'Corrective').length;
-
-    const byCategory = {
-      Mekanik: reports.filter(r => r.category === 'Mekanik').length,
-      Elektrik: reports.filter(r => r.category === 'Elektrik').length,
-      Otomotif: reports.filter(r => r.category === 'Otomotif').length,
-    };
-
-    return { totalReports, completed, inProgress, preventive, corrective, byCategory };
-  }, [reports]);
-
-  const filteredReports = useMemo(() => {
-    return reports.filter(rep => {
-      const matchSearch = rep.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          rep.technician.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          rep.damageDetail.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchCat = categoryFilter === 'Semua' || rep.category === categoryFilter;
-      const matchStatus = statusFilter === 'Semua' || rep.status === statusFilter;
-      return matchSearch && matchCat && matchStatus;
-    });
-  }, [reports, searchTerm, categoryFilter, statusFilter]);
-
-  const handleSaveTechnician = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const techData = {
-      id: editingTech ? editingTech.id : `TECH-${String(technicians.length + 1).padStart(3, '0')}`,
-      name: formData.get('name'),
-      specialty: formData.get('specialty'),
-      contact: formData.get('contact'),
-      status: formData.get('status'),
-    };
-
-    if (editingTech) {
-      setTechnicians(technicians.map(t => t.id === editingTech.id ? techData : t));
-      showToast('Data teknisi berhasil diperbarui!');
-    } else {
-      setTechnicians([...technicians, techData]);
-      showToast('Teknisi baru berhasil ditambahkan!');
-    }
-    setIsTechModalOpen(false);
-    setEditingTech(null);
-  };
-
-  const handleDeleteTechnician = (id) => {
-    if (confirm('Apakah Anda yakin ingin menghapus teknisi ini?')) {
-      setTechnicians(technicians.filter(t => t.id !== id));
-      showToast('Teknisi berhasil dihapus.', 'error');
-    }
-  };
-
-  const handleSaveReport = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const start = formData.get('timestampStart');
-    const end = formData.get('timestampEnd');
-
-    // Auto calculate duration if both timestamps exist
-    let durationCalc = '0j 0m';
-    if (start && end) {
-      const diffMs = new Date(end) - new Date(start);
-      if (diffMs > 0) {
-        const hrs = Math.floor(diffMs / (1000 * 60 * 60));
-        const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-        durationCalc = `${hrs}j ${mins}m`;
-      }
-    }
-
-    const reportData = {
-      id: editingReport ? editingReport.id : `REP-2026-${String(reports.length + 1).padStart(3, '0')}`,
-      timestampStart: start,
-      timestampEnd: end,
-      duration: durationCalc,
-      technician: formData.get('technician'),
-      category: formData.get('category'),
-      activityType: formData.get('activityType'),
-      damageDetail: formData.get('damageDetail'),
-      actionTaken: formData.get('actionTaken'),
-      nextPlanning: formData.get('nextPlanning'),
-      usedParts: formData.get('usedParts'),
-      neededParts: formData.get('neededParts'),
-      brokenParts: formData.get('brokenParts'),
-      status: formData.get('status'),
-    };
-
-    if (editingReport) {
-      setReports(reports.map(r => r.id === editingReport.id ? reportData : r));
-      showToast('Laporan maintenance berhasil diperbarui!');
-    } else {
-      setReports([reportData, ...reports]);
-      showToast('Laporan maintenance baru berhasil dibuat!');
-    }
-    setIsReportModalOpen(false);
-    setEditingReport(null);
-  };
-
-  const handleDeleteReport = (id) => {
-    if (confirm('Hapus laporan maintenance ini secara permanen?')) {
-      setReports(reports.filter(r => r.id !== id));
-      showToast('Laporan berhasil dihapus.', 'error');
-    }
-  };
-
-  const exportToCSV = () => {
-    const headers = ['ID', 'Mulai', 'Selesai', 'Durasi', 'Teknisi', 'Kategori', 'Tipe', 'Kerusakan', 'Tindakan', 'Status'];
-    const rows = reports.map(r => [
-      r.id, r.timestampStart, r.timestampEnd, r.duration, r.technician, r.category, r.activityType,
-      `"${r.damageDetail}"`, `"${r.actionTaken}"`, r.status
-    ]);
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `EMMS_Reports_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast('Berhasil mengekspor data ke format CSV!');
-  };
-
-  const exportToExcel = () => {
-    // Simulated Excel XML / Tab-separated Table Export
-    let html = `<table><tr><th>ID</th><th>Mulai</th><th>Selesai</th><th>Durasi</th><th>Teknisi</th><th>Kategori</th><th>Kegiatan</th><th>Kerusakan</th><th>Tindakan</th><th>Status</th></tr>`;
-    reports.forEach(r => {
-      html += `<tr><td>${r.id}</td><td>${r.timestampStart}</td><td>${r.timestampEnd}</td><td>${r.duration}</td><td>${r.technician}</td><td>${r.category}</td><td>${r.activityType}</td><td>${r.damageDetail}</td><td>${r.actionTaken}</td><td>${r.status}</td></tr>`;
-    });
-    html += `</table>`;
-    const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `EMMS_Report_${new Date().toISOString().slice(0,10)}.xls`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    showToast('Berhasil mengekspor data ke format Excel (.xls)!');
-  };
-
-  const printPDF = () => {
-    window.print();
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-orange-500 selection:text-white pb-12">
-      {/* Background ambient lighting effects */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/3 -right-40 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 left-1/3 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
-      </div>
-
-      {/* Toast Notification */}
-      {toast.show && (
-        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl backdrop-blur-xl border transition-all animate-bounce ${
-          toast.type === 'error' ? 'bg-red-950/80 border-red-500/50 text-red-200' : 'bg-slate-900/90 border-cyan-500/50 text-cyan-200'
-        }`}>
-          {toast.type === 'error' ? <AlertCircle className="w-5 h-5 text-red-400" /> : <CheckCircle2 className="w-5 h-5 text-cyan-400" />}
-          <span className="text-sm font-medium">{toast.message}</span>
-        </div>
-      )}
-
-      {}
-      <header className="relative z-10 border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-xl sticky top-0 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 via-cyan-500 to-orange-500 p-0.5 shadow-lg shadow-cyan-500/20 flex items-center justify-center">
-              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-                <Shield className="w-6 h-6 text-cyan-400 animate-pulse" />
-              </div>
+    <header class="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-xl border-b border-slate-800 px-4 lg:px-8 py-4 flex flex-col md:flex-row items-center justify-between gap-4 no-print">
+        <div class="flex items-center space-x-3">
+            <div class="p-2.5 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl shadow-lg shadow-orange-500/20 text-white">
+                <i data-lucide="cpu" class="w-6 h-6 animate-pulse"></i>
             </div>
             <div>
-              <div className="flex items-center space-x-2">
-                <h1 className="text-xl font-black tracking-wider bg-gradient-to-r from-white via-slate-200 to-cyan-400 bg-clip-text text-transparent">
-                  EMMS <span className="text-orange-500 text-xs px-2 py-0.5 bg-orange-500/10 rounded-full border border-orange-500/30">Enterprise v3.2</span>
-                </h1>
-              </div>
-              <p className="text-xs text-slate-400">Engineering Maintenance & Asset Management Suite</p>
+                <div class="flex items-center space-x-2">
+                    <h1 class="text-xl font-bold tracking-tight text-white">EMMS Enterprise</h1>
+                    <span class="text-xs bg-orange-500/10 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-full font-semibold">v3.2 PRO</span>
+                </div>
+                <p class="text-xs text-slate-400">Engineering Maintenance Management & Quality System</p>
             </div>
-          </div>
-
-          <div className="hidden md:flex items-center space-x-6 text-sm">
-            <div className="flex items-center space-x-2 bg-slate-800/40 px-3 py-1.5 rounded-lg border border-slate-700/50">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
-              <span className="text-slate-300 font-medium">System Online</span>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-slate-400">Database Engine</p>
-              <p className="text-xs font-semibold text-cyan-400">PostgreSQL Cloud Cluster</p>
-            </div>
-          </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-2 overflow-x-auto pb-3">
-          {[
-            { id: 'dashboard', label: 'Dashboard & Analitik', icon: BarChart3 },
-            { id: 'reports', label: 'Laporan Maintenance', icon: FileText },
-            { id: 'technicians', label: 'Manajemen Teknisi', icon: Users },
-          ].map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${
-                  isActive 
-                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/25 border border-cyan-400/30' 
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-                }`}
-              >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
+        <!-- Navigation Tabs -->
+        <div class="flex items-center bg-slate-950/60 p-1.5 rounded-2xl border border-slate-800/80 shadow-inner flex-wrap justify-center gap-1">
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/20">
+                <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+                <span>Dashboard</span>
+            </button>
+            <button onclick="switchTab('quality')" id="nav-quality" class="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:text-white hover:bg-slate-800/50">
+                <i data-lucide="target" class="w-4 h-4 text-emerald-400"></i>
+                <span>Sasaran Mutu</span>
+            </button>
+            <button onclick="switchTab('reports')" id="nav-reports" class="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:text-white hover:bg-slate-800/50">
+                <i data-lucide="file-text" class="w-4 h-4"></i>
+                <span>Laporan Maintenance</span>
+                <span id="badge-reports-count" class="ml-1 px-1.5 py-0.2 bg-slate-800 text-orange-400 rounded-full text-xs">3</span>
+            </button>
+            <button onclick="switchTab('technicians')" id="nav-technicians" class="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:text-white hover:bg-slate-800/50">
+                <i data-lucide="users" class="w-4 h-4"></i>
+                <span>Manajemen Teknisi</span>
+                <span id="badge-techs-count" class="ml-1 px-1.5 py-0.2 bg-slate-800 text-cyan-400 rounded-full text-xs">5</span>
+            </button>
         </div>
-      </header>
 
-      {}
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        <!-- Quick Action Button -->
+        <div class="flex items-center space-x-3">
+            <button onclick="openReportModal()" class="flex items-center space-x-2 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-lg shadow-orange-500/30 transition-all duration-150">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Buat Laporan Baru</span>
+            </button>
+        </div>
+    </header>
 
-        {/* -------------------- TAB 1: DASHBOARD & ANALITIK -------------------- */}
-        {activeTab === 'dashboard' && (
-          <div className="space-y-8 animate-fadeIn">
-            {/* Top Metric Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {[
-                { title: 'Total Laporan', value: analytics.totalReports, icon: FileText, color: 'from-blue-600 to-cyan-500', note: '+12% dari bulan lalu' },
-                { title: 'Maintenance Selesai', value: analytics.completed, icon: CheckCircle2, color: 'from-emerald-600 to-teal-500', note: `${Math.round((analytics.completed/analytics.totalReports)*100 || 0)}% tingkat penyelesaian` },
-                { title: 'Dalam Proses', value: analytics.inProgress, icon: Clock, color: 'from-amber-600 to-orange-500', note: 'Memerlukan atensi' },
-                { title: 'Preventive / Corrective', value: `${analytics.preventive} / ${analytics.corrective}`, icon: Wrench, color: 'from-purple-600 to-indigo-500', note: 'Rasio Perawatan' },
-              ].map((card, idx) => {
-                const Icon = card.icon;
-                return (
-                  <div key={idx} className="bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-slate-700 transition-all">
-                    <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-gradient-to-br opacity-10 rounded-full blur-2xl group-hover:opacity-20 transition-all"></div>
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-sm font-medium text-slate-400">{card.title}</span>
-                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${card.color} flex items-center justify-center text-white shadow-md`}>
-                        <Icon className="w-5 h-5" />
-                      </div>
+    <main class="max-w-7xl mx-auto px-4 lg:px-8 mt-8">
+        
+        <!-- Global Category Filter Bar -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 bg-slate-900/60 p-4 rounded-2xl border border-slate-800/80 backdrop-blur-md no-print">
+            <div class="flex items-center space-x-2 w-full sm:w-auto">
+                <i data-lucide="filter" class="w-4 h-4 text-orange-400 ml-1"></i>
+                <span class="text-sm font-medium text-slate-300">Filter Bidang Keahlian:</span>
+            </div>
+
+            <div class="flex items-center space-x-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0" id="category-filter-buttons">
+                <!-- Dynamically populated filter buttons -->
+            </div>
+        </div>
+
+        <!-- ========================================================== -->
+        <!-- TAB 1: DASHBOARD ANALYTICS                                 -->
+        <!-- ========================================================== -->
+        <div id="tab-content-dashboard" class="space-y-8 animate-fadeIn">
+            <!-- Top Metric Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" id="metric-cards-container">
+                <!-- Populated via JS -->
+            </div>
+
+            <!-- Division Breakdown Cards -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" id="division-cards-container">
+                <!-- Populated via JS -->
+            </div>
+
+            <!-- Recent Quick Table -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-md">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="text-lg font-bold text-white">Aktivitas & Laporan Maintenance Terbaru</h3>
+                        <p class="text-xs text-slate-400">Ringkasan pengerjaan teknis lapangan pabrik</p>
                     </div>
-                    <div className="text-3xl font-extrabold text-white mb-1 tracking-tight">{card.value}</div>
-                    <div className="text-xs text-slate-400">{card.note}</div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Category Breakdown & Quick Actions */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Category Breakdown */}
-              <div className="lg:col-span-2 bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-6 shadow-xl">
-                <h3 className="text-lg font-bold text-white mb-6 flex items-center space-x-2">
-                  <BarChart3 className="w-5 h-5 text-cyan-400" />
-                  <span>Distribusi Berdasarkan Bidang Keahlian</span>
-                </h3>
-                <div className="space-y-5">
-                  {[
-                    { name: 'Mekanik (Mechanical)', count: analytics.byCategory.Mekanik, total: analytics.totalReports, color: 'bg-orange-500', icon: Wrench },
-                    { name: 'Elektrik (Electrical)', count: analytics.byCategory.Elektrik, total: analytics.totalReports, color: 'bg-cyan-500', icon: Zap },
-                    { name: 'Otomotif (Automotive)', count: analytics.byCategory.Otomotif, total: analytics.totalReports, color: 'bg-blue-500', icon: Truck },
-                  ].map((cat, idx) => {
-                    const percentage = cat.total > 0 ? Math.round((cat.count / cat.total) * 100) : 0;
-                    const Icon = cat.icon;
-                    return (
-                      <div key={idx} className="space-y-2">
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="flex items-center space-x-2 font-medium text-slate-200">
-                            <Icon className="w-4 h-4 text-slate-400" />
-                            <span>{cat.name}</span>
-                          </span>
-                          <span className="font-bold text-white">{cat.count} Laporan ({percentage}%)</span>
-                        </div>
-                        <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden p-0.5 border border-slate-700/50">
-                          <div className={`${cat.color} h-full rounded-full transition-all duration-1000`} style={{ width: `${percentage}%` }}></div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Quick Action Panel */}
-              <div className="bg-gradient-to-br from-slate-900/80 to-slate-900/40 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-2">Panel Kontrol Cepat</h3>
-                  <p className="text-xs text-slate-400 mb-6">Akses instan untuk membuat laporan baru atau mendaftarkan teknisi tim.</p>
-                  
-                  <div className="space-y-3">
-                    <button 
-                      onClick={() => { setEditingReport(null); setIsReportModalOpen(true); }}
-                      className="w-full flex items-center justify-between px-4 py-3.5 bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-amber-700 transition-all shadow-lg shadow-orange-500/20"
-                    >
-                      <span className="flex items-center space-x-2">
-                        <Plus className="w-5 h-5" />
-                        <span>Buat Laporan Maintenance</span>
-                      </span>
-                      <ArrowUpRight className="w-4 h-4" />
+                    <button onclick="switchTab('reports')" class="text-xs text-orange-400 hover:text-orange-300 font-semibold flex items-center space-x-1">
+                        <span>Lihat Semua Laporan</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4"></i>
                     </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-950/80 text-slate-400 uppercase text-xs tracking-wider border-b border-slate-800">
+                            <tr>
+                                <th class="py-3.5 px-4 font-semibold">ID Laporan</th>
+                                <th class="py-3.5 px-4 font-semibold">Teknisi</th>
+                                <th class="py-3.5 px-4 font-semibold">Kategori</th>
+                                <th class="py-3.5 px-4 font-semibold">Jenis</th>
+                                <th class="py-3.5 px-4 font-semibold">Durasi</th>
+                                <th class="py-3.5 px-4 font-semibold">Status</th>
+                                <th class="py-3.5 px-4 text-right font-semibold">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/60" id="recent-reports-tbody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
-                    <button 
-                      onClick={() => { setEditingTech(null); setIsTechModalOpen(true); }}
-                      className="w-full flex items-center justify-between px-4 py-3.5 bg-slate-800/80 hover:bg-slate-800 text-slate-200 rounded-xl font-semibold border border-slate-700 transition-all"
-                    >
-                      <span className="flex items-center space-x-2">
-                        <Users className="w-5 h-5 text-cyan-400" />
-                        <span>Tambah Teknisi Baru</span>
-                      </span>
-                      <ArrowUpRight className="w-4 h-4" />
-                    </button>
-                  </div>
+        <!-- ========================================================== -->
+        <!-- TAB 2: SASARAN MUTU PERBAIKAN & MAINTENANCE                -->
+        <!-- ========================================================== -->
+        <div id="tab-content-quality" class="space-y-8 animate-fadeIn hidden">
+            <div class="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 lg:p-8 shadow-2xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                    <div>
+                        <div class="flex items-center space-x-2 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">
+                            <i data-lucide="shield-check" class="w-4 h-4"></i>
+                            <span>ISO 9001:2015 & ISO 55001 Asset Management</span>
+                        </div>
+                        <h2 class="text-2xl font-extrabold text-white">Dashboard Sasaran Mutu Perbaikan & Maintenance</h2>
+                        <p class="text-sm text-slate-400 mt-1">Monitoring Key Performance Indicators (KPI), pencapaian SLA, dan efektivitas keandalan mesin.</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button onclick="openObjectiveModal()" class="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-lg shadow-emerald-600/20 transition-all">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>Tambah/Edit Target Sasaran</span>
+                        </button>
+                    </div>
                 </div>
 
-                <div className="mt-6 pt-6 border-t border-slate-800/80">
-                  <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span>Aktivitas Sistem Terakhir:</span>
-                    <span className="text-cyan-400 font-mono">Baru saja</span>
-                  </div>
+                <!-- KPI Metric Cards Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8" id="quality-kpi-grid">
+                    <!-- Populated via JS -->
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* -------------------- TAB 2: LAPORAN MAINTENANCE -------------------- */}
-        {activeTab === 'reports' && (
-          <div className="space-y-6 animate-fadeIn">
-            {/* Header controls & Export buttons */}
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 p-6 rounded-2xl shadow-xl">
-              <div>
-                <h2 className="text-xl font-bold text-white">Modul Laporan Maintenance</h2>
-                <p className="text-xs text-slate-400">Kelola dan pantau seluruh riwayat perbaikan, preventive, material, dan sparepart.</p>
-              </div>
+                <!-- Quality Objectives Progress Table & Detailed Indicators -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 bg-slate-950/60 border border-slate-800/80 rounded-2xl p-6">
+                        <h3 class="text-base font-bold text-white mb-4 flex items-center space-x-2">
+                            <i data-lucide="activity" class="w-5 h-5 text-emerald-400"></i>
+                            <span>Detail Indikator Sasaran Mutu Tahun 2026</span>
+                        </h3>
+                        <div class="space-y-4" id="objectives-list-container">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
 
-              <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                <button 
-                  onClick={exportToExcel}
-                  className="flex items-center space-x-2 px-4 py-2.5 bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs font-semibold hover:bg-emerald-600/30 transition-all"
-                >
-                  <FileSpreadsheet className="w-4 h-4" />
-                  <span>Ekspor Excel</span>
-                </button>
-                <button 
-                  onClick={exportToCSV}
-                  className="flex items-center space-x-2 px-4 py-2.5 bg-blue-600/20 border border-blue-500/40 text-blue-300 rounded-xl text-xs font-semibold hover:bg-blue-600/30 transition-all"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Ekspor CSV</span>
-                </button>
-                <button 
-                  onClick={printPDF}
-                  className="flex items-center space-x-2 px-4 py-2.5 bg-purple-600/20 border border-purple-500/40 text-purple-300 rounded-xl text-xs font-semibold hover:bg-purple-600/30 transition-all"
-                >
-                  <Printer className="w-4 h-4" />
-                  <span>Cetak / PDF</span>
-                </button>
-                <button 
-                  onClick={() => { setEditingReport(null); setIsReportModalOpen(true); }}
-                  className="flex items-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-xl text-xs font-semibold hover:from-orange-600 shadow-lg shadow-orange-500/20 transition-all ml-auto md:ml-0"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Tambah Laporan</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Filters Bar */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800/80 p-4 rounded-2xl">
-              <div className="relative">
-                <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
-                <input 
-                  type="text" 
-                  placeholder="Cari ID, Teknisi, atau detail kerusakan..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-slate-950/60 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all"
-                />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Filter className="w-4 h-4 text-slate-400 shrink-0" />
-                <select 
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500 transition-all"
-                >
-                  <option value="Semua">Semua Kategori (Bidang)</option>
-                  <option value="Mekanik">Mekanik</option>
-                  <option value="Elektrik">Elektrik</option>
-                  <option value="Otomotif">Otomotif</option>
-                </select>
-              </div>
-
-              <div>
-                <select 
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500 transition-all"
-                >
-                  <option value="Semua">Semua Status</option>
-                  <option value="Selesai">Selesai</option>
-                  <option value="Proses">Proses</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Reports Table / Cards */}
-            <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 rounded-2xl shadow-xl overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400 text-xs uppercase tracking-wider font-semibold">
-                      <th className="p-4">ID & Waktu</th>
-                      <th className="p-4">Teknisi & Bidang</th>
-                      <th className="p-4">Kegiatan</th>
-                      <th className="p-4">Detail Kerusakan & Tindakan</th>
-                      <th className="p-4">Sparepart / Material</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4 text-right">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-sm">
-                    {filteredReports.length === 0 ? (
-                      <tr>
-                        <td colSpan="7" className="p-8 text-center text-slate-500">
-                          Tidak ada laporan maintenance yang ditemukan.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredReports.map(rep => (
-                        <tr key={rep.id} className="hover:bg-slate-800/30 transition-all">
-                          <td className="p-4 align-top">
-                            <span className="font-mono font-bold text-cyan-400 text-xs block mb-1">{rep.id}</span>
-                            <div className="text-xs text-slate-400 space-y-0.5">
-                              <div>Start: {rep.timestampStart.replace('T', ' ')}</div>
-                              <div>Durasi: <span className="text-slate-200 font-semibold">{rep.duration}</span></div>
+                    <!-- Quality Audit & Compliance Summary -->
+                    <div class="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-base font-bold text-white mb-4 flex items-center space-x-2">
+                                <i data-lucide="award" class="w-5 h-5 text-amber-400"></i>
+                               <span>Evaluasi & Rekomendasi Mutu</span>
+                            </h3>
+                            <div class="space-y-3 text-sm text-slate-300">
+                                <div class="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                                    <div class="font-semibold text-emerald-400 flex items-center space-x-1.5 mb-1">
+                                        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                                        <span>Pencapaian Preventive Maintenance</span>
+                                    </div>
+                                    <p class="text-xs text-slate-400">Jadwal rutin bulanan tercapai 100% tanpa ada penundaan kritis pada panel MDB dan konveyor.</p>
+                                </div>
+                                <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                                    <div class="font-semibold text-amber-400 flex items-center space-x-1.5 mb-1">
+                                        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                                        <span>Perhatian Khusus MTTR</span>
+                                    </div>
+                                    <p class="text-xs text-slate-400">Mean Time To Repair (MTTR) saat ini di angka 3.3 Jam. Target optimal perusahaan adalah dibawah 3.0 Jam.</p>
+                                </div>
+                                <div class="p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-xl">
+                                    <div class="font-semibold text-cyan-400 flex items-center space-x-1.5 mb-1">
+                                        <i data-lucide="users" class="w-4 h-4"></i>
+                                        <span>Ketersediaan Suku Cadang</span>
+                                    </div>
+                                    <p class="text-xs text-slate-400">Lead time pengadaan spare parts kritikal perlu dipercepat untuk menghindari downtime berkepanjangan.</p>
+                                </div>
                             </div>
-                          </td>
-                          <td className="p-4 align-top">
-                            <div className="font-semibold text-white">{rep.technician}</div>
-                            <span className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                              rep.category === 'Mekanik' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/30' :
-                              rep.category === 'Elektrik' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30' :
-                              'bg-blue-500/10 text-blue-400 border border-blue-500/40'
-                            }`}>
-                              {rep.category}
-                            </span>
-                          </td>
-                          <td className="p-4 align-top">
-                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                              rep.activityType === 'Preventive' ? 'bg-purple-500/20 text-purple-300' : 'bg-amber-500/20 text-amber-300'
-                            }`}>
-                              {rep.activityType}
-                            </span>
-                          </td>
-                          <td className="p-4 align-top max-w-xs">
-                            <div className="text-slate-200 font-medium mb-1 line-clamp-2"><strong>Kerusakan:</strong> {rep.damageDetail}</div>
-                            <div className="text-xs text-slate-400 line-clamp-2"><strong>Tindakan:</strong> {rep.actionTaken}</div>
-                            <div className="text-xs text-cyan-400/80 mt-1"><strong>Planning:</strong> {rep.nextPlanning}</div>
-                          </td>
-                          <td className="p-4 align-top text-xs space-y-1">
-                            <div><span className="text-slate-400">Terpakai:</span> <span className="text-emerald-400">{rep.usedParts}</span></div>
-                            <div><span className="text-slate-400">Req:</span> <span className="text-orange-400">{rep.neededParts}</span></div>
-                            <div><span className="text-slate-400">Afkir:</span> <span className="text-red-400">{rep.brokenParts}</span></div>
-                          </td>
-                          <td className="p-4 align-top">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold inline-flex items-center space-x-1.5 ${
-                              rep.status === 'Selesai' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                            }`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${rep.status === 'Selesai' ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`}></span>
-                              <span>{rep.status}</span>
-                            </span>
-                          </td>
-                          <td className="p-4 align-top text-right space-x-2 whitespace-nowrap">
-                            <button 
-                              onClick={() => { setEditingReport(rep); setIsReportModalOpen(true); }}
-                              className="p-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-lg transition-all"
-                              title="Edit Laporan"
-                            >
-                              <Edit3 className="w-4 h-4" />
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-slate-800 text-center">
+                            <button onclick="showToast('Laporan Audit Mutu berhasil di-generate ke PDF!', 'success')" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold border border-slate-700 transition-all flex items-center justify-center space-x-2">
+                                <i data-lucide="printer" class="w-4 h-4 text-orange-400"></i>
+                                <span>Cetak Laporan Sasaran Mutu</span>
                             </button>
-                            <button 
-                              onClick={() => handleDeleteReport(rep.id)}
-                              className="p-2 bg-slate-800 hover:bg-red-900/50 text-red-400 rounded-lg transition-all"
-                              title="Hapus Laporan"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* -------------------- TAB 3: MANAJEMEN TEKNISI -------------------- */}
-        {activeTab === 'technicians' && (
-          <div className="space-y-6 animate-fadeIn">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 p-6 rounded-2xl shadow-xl">
-              <div>
-                <h2 className="text-xl font-bold text-white">Manajemen Tim Teknisi & Mekanik</h2>
-                <p className="text-xs text-slate-400">Tambah, ubah, dan pantau status ketersediaan personel teknik di lapangan.</p>
-              </div>
-
-              <button 
-                onClick={() => { setEditingTech(null); setIsTechModalOpen(true); }}
-                className="flex items-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl text-xs font-semibold hover:from-cyan-600 shadow-lg shadow-cyan-500/25 transition-all"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Tambah Teknisi Baru</span>
-              </button>
-            </div>
-
-            {/* Technicians Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {technicians.map(tech => (
-                <div key={tech.id} className="bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-6 shadow-xl relative group hover:border-cyan-500/50 transition-all">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-800 to-slate-700 border border-slate-700 flex items-center justify-center text-cyan-400 font-bold text-lg shadow-inner">
-                        {tech.name.slice(0, 2).toUpperCase()}
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-white text-base">{tech.name}</h4>
-                        <span className="font-mono text-xs text-cyan-400">{tech.id}</span>
-                      </div>
+                        </div>
                     </div>
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                      tech.status === 'Aktif' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                    }`}>
-                      {tech.status}
-                    </span>
-                  </div>
-
-                  <div className="space-y-2.5 text-sm mb-6 pt-3 border-t border-slate-800/80">
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Spesialisasi:</span>
-                      <span className={`font-semibold px-2 py-0.5 rounded text-xs ${
-                        tech.specialty === 'Mekanik' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/30' :
-                        tech.specialty === 'Elektrik' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30' :
-                        'bg-blue-500/10 text-blue-400 border border-blue-500/40'
-                      }`}>
-                        {tech.specialty}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Kontak (WhatsApp):</span>
-                      <span className="text-slate-200 font-mono text-xs">{tech.contact}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-800/80">
-                    <button 
-                      onClick={() => { setEditingTech(tech); setIsTechModalOpen(true); }}
-                      className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-lg text-xs font-medium transition-all"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                      <span>Edit</span>
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteTechnician(tech.id)}
-                      className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-red-950 text-red-400 rounded-lg text-xs font-medium transition-all"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Hapus</span>
-                    </button>
-                  </div>
                 </div>
-              ))}
             </div>
-          </div>
-        )}
-
-      </main>
-
-      {/* -------------------- MODAL: TAMBAH / EDIT TEKNISI -------------------- */}
-      {isTechModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl relative">
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
-              <h3 className="text-lg font-bold text-white">
-                {editingTech ? 'Edit Data Teknisi' : 'Tambah Teknisi Baru'}
-              </h3>
-              <button 
-                onClick={() => setIsTechModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1.5 rounded-lg bg-slate-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveTechnician} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Nama Lengkap & Gelar</label>
-                <input 
-                  type="text" 
-                  name="name" 
-                  defaultValue={editingTech ? editingTech.name : ''} 
-                  required 
-                  placeholder="Misal: Bambang Pamungkas, S.T."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Spesialisasi Bidang</label>
-                <select 
-                  name="specialty" 
-                  defaultValue={editingTech ? editingTech.specialty : 'Mekanik'}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500"
-                >
-                  <option value="Mekanik">Mekanik</option>
-                  <option value="Elektrik">Elektrik</option>
-                  <option value="Otomotif">Otomotif</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Kontak / Nomor WhatsApp</label>
-                <input 
-                  type="text" 
-                  name="contact" 
-                  defaultValue={editingTech ? editingTech.contact : '+62 8...'} 
-                  required 
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Status Keaktifan</label>
-                <select 
-                  name="status" 
-                  defaultValue={editingTech ? editingTech.status : 'Aktif'}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500"
-                >
-                  <option value="Aktif">Aktif</option>
-                  <option value="Tugas">Tugas Lapangan</option>
-                </select>
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-800">
-                <button 
-                  type="button" 
-                  onClick={() => setIsTechModalOpen(false)}
-                  className="px-4 py-2.5 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-700"
-                >
-                  Batal
-                </button>
-                <button 
-                  type="submit" 
-                  className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl text-xs font-semibold shadow-lg shadow-cyan-500/20"
-                >
-                  Simpan Teknisi
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
-      )}
 
-      {/* -------------------- MODAL: TAMBAH / EDIT LAPORAN MAINTENANCE -------------------- */}
-      {isReportModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative my-8">
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
-              <h3 className="text-lg font-bold text-white">
-                {editingReport ? 'Edit Laporan Maintenance' : 'Buat Laporan Maintenance Baru'}
-              </h3>
-              <button 
-                onClick={() => setIsReportModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1.5 rounded-lg bg-slate-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
+        <!-- ========================================================== -->
+        <!-- TAB 3: LAPORAN MAINTENANCE                                 -->
+        <!-- ========================================================== -->
+        <div id="tab-content-reports" class="space-y-6 animate-fadeIn hidden">
+            <!-- Toolbar -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur-md flex flex-col md:flex-row items-center justify-between gap-4 no-print">
+                <div class="relative w-full md:w-96">
+                    <i data-lucide="search" class="absolute left-3.5 top-3 w-4 h-4 text-slate-400"></i>
+                    <input type="text" id="search-input" placeholder="Cari ID, teknisi, kerusakan, atau tindakan..." oninput="handleSearchInput(event)" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500 transition-colors" />
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+                    <button onclick="exportToExcel()" class="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-xl text-xs font-semibold border border-slate-700 transition-all">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-400"></i>
+                        <span>Ekspor Excel</span>
+                    </button>
+                    <button onclick="exportToCSV()" class="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-xl text-xs font-semibold border border-slate-700 transition-all">
+                        <i data-lucide="file-code" class="w-4 h-4 text-cyan-400"></i>
+                        <span>Ekspor CSV</span>
+                    </button>
+                    <button onclick="window.print()" class="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-xl text-xs font-semibold border border-slate-700 transition-all">
+                        <i data-lucide="printer" class="w-4 h-4 text-orange-400"></i>
+                        <span>Cetak PDF</span>
+                    </button>
+                    <button onclick="openReportModal()" class="flex items-center space-x-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-lg shadow-orange-500/20 transition-all">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>Tambah Laporan</span>
+                    </button>
+                </div>
             </div>
 
-            <form onSubmit={handleSaveReport} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Timestamp Mulai Pengerjaan</label>
-                  <input 
-                    type="datetime-local" 
-                    name="timestampStart" 
-                    defaultValue={editingReport ? editingReport.timestampStart : new Date().toISOString().slice(0,16)} 
-                    required 
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
-                  />
+            <!-- Reports Table -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl shadow-xl overflow-hidden backdrop-blur-md">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-950/80 text-slate-400 uppercase text-xs tracking-wider border-b border-slate-800">
+                            <tr>
+                                <th class="py-3.5 px-4 font-semibold">ID Laporan</th>
+                                <th class="py-3.5 px-4 font-semibold">Tanggal / Waktu</th>
+                                <th class="py-3.5 px-4 font-semibold">Teknisi</th>
+                                <th class="py-3.5 px-4 font-semibold">Kategori</th>
+                                <th class="py-3.5 px-4 font-semibold">Jenis</th>
+                                <th class="py-3.5 px-4 font-semibold">Durasi</th>
+                                <th class="py-3.5 px-4 font-semibold">Status</th>
+                                <th class="py-3.5 px-4 text-right font-semibold">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/60" id="reports-table-tbody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Timestamp Selesai Pengerjaan</label>
-                  <input 
-                    type="datetime-local" 
-                    name="timestampEnd" 
-                    defaultValue={editingReport ? editingReport.timestampEnd : new Date().toISOString().slice(0,16)} 
-                    required 
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Teknisi Bertugas</label>
-                  <select 
-                    name="technician" 
-                    defaultValue={editingReport ? editingReport.technician : technicians[0]?.name}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
-                  >
-                    {technicians.map(t => (
-                      <option key={t.id} value={t.name}>{t.name} ({t.specialty})</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Kategori Bidang</label>
-                  <select 
-                    name="category" 
-                    defaultValue={editingReport ? editingReport.category : 'Mekanik'}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
-                  >
-                    <option value="Mekanik">Mekanik</option>
-                    <option value="Elektrik">Elektrik</option>
-                    <option value="Otomotif">Otomotif</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Jenis Kegiatan</label>
-                  <select 
-                    name="activityType" 
-                    defaultValue={editingReport ? editingReport.activityType : 'Corrective'}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
-                  >
-                    <option value="Corrective">Perbaikan (Corrective/Breakdown)</option>
-                    <option value="Preventive">Perawatan (Preventive)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Detail Kerusakan / Temuan Lapangan</label>
-                <textarea 
-                  name="damageDetail" 
-                  rows="2"
-                  defaultValue={editingReport ? editingReport.damageDetail : ''} 
-                  required 
-                  placeholder="Uraikan kondisi kerusakan unit..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
-                ></textarea>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Tindakan Perbaikan yang Dilakukan</label>
-                <textarea 
-                  name="actionTaken" 
-                  rows="2"
-                  defaultValue={editingReport ? editingReport.actionTaken : ''} 
-                  required 
-                  placeholder="Uraikan solusi dan langkah perbaikan..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
-                ></textarea>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Sparepart Terpakai (Keluar)</label>
-                  <input 
-                    type="text" 
-                    name="usedParts" 
-                    defaultValue={editingReport ? editingReport.usedParts : ''} 
-                    placeholder="Contoh: Bearing 6204 (2 pcs)"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Sparepart Dibutuhkan (PR)</label>
-                  <input 
-                    type="text" 
-                    name="neededParts" 
-                    defaultValue={editingReport ? editingReport.neededParts : ''} 
-                    placeholder="Contoh: Mechanical Seal (1 unit)"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Barang Rusak / Afkir / Retur</label>
-                  <input 
-                    type="text" 
-                    name="brokenParts" 
-                    defaultValue={editingReport ? editingReport.brokenParts : ''} 
-                    placeholder="Contoh: Gearbox aus"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Perencanaan / Jadwal Maintenance Berikutnya</label>
-                  <input 
-                    type="text" 
-                    name="nextPlanning" 
-                    defaultValue={editingReport ? editingReport.nextPlanning : ''} 
-                    placeholder="Misal: Cek berkala 1 bulan ke depan"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Status Laporan</label>
-                  <select 
-                    name="status" 
-                    defaultValue={editingReport ? editingReport.status : 'Selesai'}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
-                  >
-                    <option value="Selesai">Selesai</option>
-                    <option value="Proses">Dalam Proses</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-800">
-                <button 
-                  type="button" 
-                  onClick={() => setIsReportModalOpen(false)}
-                  className="px-4 py-2.5 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-700"
-                >
-                  Batal
-                </button>
-                <button 
-                  type="submit" 
-                  className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-xl text-xs font-semibold shadow-lg shadow-orange-500/20"
-                >
-                  Simpan Laporan
-                </button>
-              </div>
-            </form>
-          </div>
+            </div>
         </div>
-      )}
 
+        <!-- ========================================================== -->
+        <!-- TAB 4: MANAJEMEN TEKNISI                                   -->
+        <!-- ========================================================== -->
+        <div id="tab-content-technicians" class="space-y-6 animate-fadeIn hidden">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur-md no-print">
+                <div>
+                    <h3 class="text-base font-bold text-white">Daftar Personil Teknisi & Ahli Pabrik</h3>
+                    <p class="text-xs text-slate-400">Kelola status dan kontak teknisi mekanik, elektrik, dan otomotif</p>
+                </div>
+                <button onclick="openTechModal()" class="flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-lg shadow-cyan-600/20 transition-all">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i>
+                    <span>Tambah Teknisi Baru</span>
+                </button>
+            </div>
+
+            <!-- Technicians Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="technicians-grid">
+                <!-- Populated via JS -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ========================================================== -->
+    <!-- MODALS & DIALOGS                                           -->
+    <!-- ========================================================== -->
+
+    <!-- Report Form Modal -->
+    <div id="report-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm hidden p-4 overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 lg:p-8 shadow-2xl relative my-8 animate-fadeIn">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
+                <h3 id="report-modal-title" class="text-lg font-bold text-white">Buat Laporan Maintenance Baru</h3>
+                <button onclick="closeReportModal()" class="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-all">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form id="report-form" onsubmit="handleSaveReport(event)" class="space-y-4">
+                <input type="hidden" id="report-edit-id">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Tanggal & Waktu Mulai</label>
+                        <input type="datetime-local" id="report-start" name="startDate" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-orange-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Tanggal & Waktu Selesai</label>
+                        <input type="datetime-local" id="report-end" name="endDate" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-orange-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Teknisi Bertugas</label>
+                        <select id="report-technician" name="technician" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-orange-500">
+                            <!-- Populated via JS -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Kategori Bidang</label>
+                        <select id="report-category" name="category" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-orange-500">
+                            <option value="Mekanik">Mekanik</option>
+                            <option value="Elektrik">Elektrik</option>
+                            <option value="Otomotif">Otomotif</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Jenis Maintenance</label>
+                        <select id="report-type" name="type" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-orange-500">
+                            <option value="Corrective">Corrective (Perbaikan)</option>
+                            <option value="Preventive">Preventive (Pencegahan)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Detail Kerusakan / Temuan</label>
+                    <textarea id="report-damage" name="damageDetail" rows="2" required placeholder="Jelaskan kendala atau kerusakan mesin secara detail..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-orange-500"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Tindakan Perbaikan yang Dilakukan</label>
+                    <textarea id="report-action" name="actionDetail" rows="2" required placeholder="Jelaskan langkah perbaikan teknis yang telah dikerjakan..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-orange-500"></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Suku Cadang Digunakan</label>
+                        <input type="text" id="report-used" name="usedParts" placeholder="Contoh: Bearing 6205 (2 pcs)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-orange-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Suku Cadang Dibutuhkan</label>
+                        <input type="text" id="report-required" name="requiredParts" placeholder="Contoh: V-Belt B-45 (1 pcs)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-orange-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Suku Cadang Rusak/Scrap</label>
+                        <input type="text" id="report-scrapped" name="scrappedParts" placeholder="Contoh: Seal robek" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-orange-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Status Pengerjaan</label>
+                        <select id="report-status" name="status" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-orange-500">
+                            <option value="Selesai">Selesai</option>
+                            <option value="Proses">Proses (Dalam Perbaikan)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="closeReportModal()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-semibold transition-all">Batal</button>
+                    <button type="submit" class="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-semibold shadow-lg shadow-orange-500/20 transition-all">Simpan Laporan</button>
+                </div>
+            </form>
+        </div>
     </div>
-  );
-}
+
+    <!-- Technician Form Modal -->
+    <div id="tech-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm hidden p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 lg:p-8 shadow-2xl relative animate-fadeIn">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
+                <h3 id="tech-modal-title" class="text-lg font-bold text-white">Tambah Teknisi Baru</h3>
+                <button onclick="closeTechModal()" class="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-all">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form id="tech-form" onsubmit="handleSaveTechnician(event)" class="space-y-4">
+                <input type="hidden" id="tech-edit-id">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Nama Lengkap & Gelar</label>
+                    <input type="text" id="tech-name" name="name" required placeholder="Contoh: Ahmad Fauzi, S.T." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Bidang Keahlian</label>
+                    <select id="tech-category" name="category" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+                        <option value="Mekanik">Mekanik</option>
+                        <option value="Elektrik">Elektrik</option>
+                        <option value="Otomotif">Otomotif</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Nomor Kontak / WhatsApp</label>
+                    <input type="text" id="tech-contact" name="contact" required placeholder="+62 812-..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Status Keaktifan</label>
+                    <select id="tech-status" name="status" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+                        <option value="Aktif">Aktif / Siaga</option>
+                        <option value="Tugas">Sedang Bertugas</option>
+                    </select>
+                </div>
+                <div class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="closeTechModal()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-semibold transition-all">Batal</button>
+                    <button type="submit" class="px-6 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-sm font-semibold shadow-lg shadow-cyan-600/20 transition-all">Simpan Teknisi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Report Detail Modal -->
+    <div id="view-report-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm hidden p-4 overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 lg:p-8 shadow-2xl relative my-8 animate-fadeIn">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
+                <div>
+                    <span id="view-rep-id" class="text-xs font-mono bg-orange-500/10 text-orange-400 border border-orange-500/30 px-2.5 py-1 rounded-full font-bold">REP-001</span>
+                    <h3 class="text-lg font-bold text-white mt-2">Detail Laporan Maintenance</h3>
+                </div>
+                <button onclick="closeViewReportModal()" class="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-all">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4 text-sm text-slate-300">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
+                    <div>
+                        <span class="text-xs text-slate-400 block">Teknisi</span>
+                        <strong id="view-rep-tech" class="text-white">Ahmad Fauzi</strong>
+                    </div>
+                    <div>
+                        <span class="text-xs text-slate-400 block">Kategori</span>
+                        <strong id="view-rep-cat" class="text-white">Mekanik</strong>
+                    </div>
+                    <div>
+                        <span class="text-xs text-slate-400 block">Jenis</span>
+                        <strong id="view-rep-type" class="text-white">Corrective</strong>
+                    </div>
+                    <div>
+                        <span class="text-xs text-slate-400 block">Durasi</span>
+                        <strong id="view-rep-duration" class="text-white">3.5 Jam</strong>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
+                        <span class="text-xs text-slate-400 block mb-1 font-semibold">Waktu Mulai</span>
+                        <span id="view-rep-start" class="text-white font-medium">-</span>
+                    </div>
+                    <div class="bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
+                        <span class="text-xs text-slate-400 block mb-1 font-semibold">Waktu Selesai</span>
+                        <span id="view-rep-end" class="text-white font-medium">-</span>
+                    </div>
+                </div>
+
+                <div class="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 space-y-3">
+                    <div>
+                        <span class="text-xs text-orange-400 font-semibold uppercase tracking-wider block mb-1">Detail Kerusakan / Temuan:</span>
+                        <p id="view-rep-damage" class="text-slate-200">-</p>
+                    </div>
+                    <div class="pt-2 border-t border-slate-800">
+                        <span class="text-xs text-emerald-400 font-semibold uppercase tracking-wider block mb-1">Tindakan Perbaikan:</span>
+                        <p id="view-rep-action" class="text-slate-200">-</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                        <span class="text-xs text-slate-400 block mb-1">Parts Digunakan</span>
+                        <span id="view-rep-used" class="text-xs text-white font-medium">-</span>
+                    </div>
+                    <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                        <span class="text-xs text-slate-400 block mb-1">Parts Dibutuhkan</span>
+                        <span id="view-rep-required" class="text-xs text-white font-medium">-</span>
+                    </div>
+                    <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                        <span class="text-xs text-slate-400 block mb-1">Parts Rusak (Scrap)</span>
+                        <span id="view-rep-scrapped" class="text-xs text-white font-medium">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end space-x-3 pt-6 mt-6 border-t border-slate-800">
+                <button onclick="closeViewReportModal()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-semibold transition-all">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initial Datasets
+        let technicians = [
+            { id: 'TECH-001', name: 'Ahmad Fauzi, S.T.', category: 'Mekanik', contact: '+62 812-3456-7890', status: 'Aktif' },
+            { id: 'TECH-002', name: 'Budi Santoso', category: 'Elektrik', contact: '+62 813-9876-5432', status: 'Tugas' },
+            { id: 'TECH-003', name: 'Rian Pratama', category: 'Otomotif', contact: '+62 811-2233-4455', status: 'Aktif' },
+            { id: 'TECH-004', name: 'Dewi Lestari', category: 'Elektrik', contact: '+62 819-5544-3322', status: 'Aktif' },
+            { id: 'TECH-005', name: 'Joko Widodo', category: 'Mekanik', contact: '+62 856-7788-9900', status: 'Tugas' }
+        ];
+
+        let reports = [
+            {
+                id: 'REP-2026-001',
+                startDate: '2026-10-01T08:00',
+                endDate: '2026-10-01T11:30',
+                duration: '3.5 Jam',
+                technician: 'Ahmad Fauzi, S.T.',
+                category: 'Mekanik',
+                type: 'Corrective',
+                damageDetail: 'Kegagalan bearing utama pada Conveyor Line A menyebabkan motor overheat.',
+                actionDetail: 'Penggantian bearing nomor 6205-2RS, re-greasing gear box, dan balancing shaft.',
+                planning: 'Jadwal pemeriksaan ulang bearing pada 15 Oktober 2026.',
+                usedParts: 'Bearing 6205-2RS (2 pcs), High temp grease (500g)',
+                requiredParts: 'V-Belt B-45 (1 pcs cadangan)',
+                scrappedParts: 'Bearing aus berderak (2 pcs)',
+                status: 'Selesai'
+            },
+            {
+                id: 'REP-2026-002',
+                startDate: '2026-10-02T13:00',
+                endDate: '2026-10-02T15:00',
+                duration: '2.0 Jam',
+                technician: 'Budi Santoso',
+                category: 'Elektrik',
+                type: 'Preventive',
+                damageDetail: 'Inspeksi rutin panel distribusi utama (MDB) dan pengecekan suhu terminal kabel.',
+                actionDetail: 'Pembersihan debu panel, pengencangan baut terminal, dan pengukuran tegangan 3-fasa.',
+                planning: 'Kalibrasi kWh meter bulanan pada awal November.',
+                usedParts: 'Contact cleaner (1 botol)',
+                requiredParts: 'Indikator lampu panel merah (2 pcs)',
+                scrappedParts: 'Lampu indikator putus (1 pcs)',
+                status: 'Selesai'
+            },
+            {
+                id: 'REP-2026-003',
+                startDate: '2026-10-04T09:30',
+                endDate: '2026-10-04T14:00',
+                duration: '4.5 Jam',
+                technician: 'Rian Pratama',
+                category: 'Otomotif',
+                type: 'Corrective',
+                damageDetail: 'Forklift Diesel #03 mengalami kebocoran seal hidrolik pada silinder mast.',
+                actionDetail: 'Pembongkaran mast silinder, penggantian kit seal hidrolik, dan penambahan oli hidrolik.',
+                planning: 'Pemeriksaan rutin sistem kemudi forklift minggu depan.',
+                usedParts: 'Hydraulic Seal Kit FK-300 (1 set), Oli Hidrolik ISO VG 46 (10 liter)',
+                requiredParts: 'Filter hidrolik utama (1 pcs)',
+                scrappedParts: 'Seal robek dan getas (1 set)',
+                status: 'Proses'
+            }
+        ];
+
+        let qualityObjectives = [
+            { id: 'QO-01', title: 'OEE (Overall Equipment Effectiveness)', target: '>= 85%', actual: '87.4%', status: 'Tercapai', color: 'emerald' },
+            { id: 'QO-02', title: 'Preventive Maintenance Compliance', target: '100%', actual: '100%', status: 'Tercapai', color: 'emerald' },
+            { id: 'QO-03', title: 'Mean Time To Repair (MTTR)', target: '< 3.0 Jam', actual: '3.3 Jam', status: 'Dalam Proses', color: 'amber' },
+            { id: 'QO-04', title: 'Mean Time Between Failures (MTBF)', target: '> 150 Jam', actual: '168 Jam', status: 'Tercapai', color: 'emerald' },
+            { id: 'QO-05', title: 'Emergency Breakdown Rate', target: '< 5%', actual: '3.8%', status: 'Tercapai', color: 'cyan' }
+        ];
+
+        let activeTab = 'dashboard';
+        let categoryFilter = 'Semua';
+        let searchQuery = '';
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto animate-bounce bg-slate-900 border ${type === 'success' ? 'border-orange-500/50' : 'border-cyan-500/50'} text-white px-5 py-3 rounded-xl shadow-2xl flex items-center space-x-3 backdrop-blur-md bg-opacity-95 my-1`;
+            toast.innerHTML = `
+                <div class="w-3 h-3 rounded-full ${type === 'success' ? 'bg-orange-500' : 'bg-cyan-500'} animate-ping"></div>
+                <span class="text-sm font-medium">${message}</span>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        function switchTab(tabId) {
+            activeTab = tabId;
+            ['dashboard', 'quality', 'reports', 'technicians'].forEach(t => {
+                const el = document.getElementById(`tab-content-${t}`);
+                const btn = document.getElementById(`nav-${t}`);
+                if (t === tabId) {
+                    el.classList.remove('hidden');
+                    if(btn) btn.className = "flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/20";
+                } else {
+                    el.classList.add('hidden');
+                    if(btn) btn.className = "flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:text-white hover:bg-slate-800/50";
+                }
+            });
+            renderAll();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderDashboard() {
+            const totalReports = reports.length;
+            const completedReports = reports.filter(r => r.status === 'Selesai').length;
+            const inProgressReports = reports.filter(r => r.status === 'Proses').length;
+            const preventiveCount = reports.filter(r => r.type === 'Preventive').length;
+            const correctiveCount = reports.filter(r => r.type === 'Corrective').length;
+
+            const mechanicCount = technicians.filter(t => t.category === 'Mekanik').length;
+            const electricCount = technicians.filter(t => t.category === 'Elektrik').length;
+            const automotiveCount = technicians.filter(t => t.category === 'Otomotif').length;
+            const totalTechs = technicians.length;
+
+            // Header Counts
+            document.getElementById('badge-reports-count').textContent = totalReports;
+            document.getElementById('badge-techs-count').textContent = totalTechs;
+
+            // Metric Cards
+            const metricContainer = document.getElementById('metric-cards-container');
+            metricContainer.innerHTML = `
+                <div class="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-slate-800 p-6 rounded-2xl shadow-xl relative overflow-hidden group hover:border-orange-500/50 transition-all">
+                    <div class="absolute top-0 right-0 p-4 text-orange-500/20 group-hover:text-orange-500/30 transition-all"><i data-lucide="file-text" class="w-16 h-16"></i></div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Laporan Maintenance</p>
+                    <h3 class="text-3xl font-extrabold text-white mt-2">${totalReports}</h3>
+                    <div class="mt-4 flex items-center text-xs text-emerald-400 space-x-1">
+                        <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
+                        <span>${completedReports} Selesai diproses</span>
+                    </div>
+                </div>
+                <div class="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-slate-800 p-6 rounded-2xl shadow-xl relative overflow-hidden group hover:border-cyan-500/50 transition-all">
+                    <div class="absolute top-0 right-0 p-4 text-cyan-500/20 group-hover:text-cyan-500/30 transition-all"><i data-lucide="users" class="w-16 h-16"></i></div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Personil Teknisi</p>
+                    <h3 class="text-3xl font-extrabold text-white mt-2">${totalTechs}</h3>
+                    <div class="mt-4 flex items-center text-xs text-cyan-400 space-x-1">
+                        <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                        <span>Siap tugas lapangan aktif</span>
+                    </div>
+                </div>
+                <div class="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-slate-800 p-6 rounded-2xl shadow-xl relative overflow-hidden group hover:border-amber-500/50 transition-all">
+                    <div class="absolute top-0 right-0 p-4 text-amber-500/20 group-hover:text-amber-500/30 transition-all"><i data-lucide="alert-triangle" class="w-16 h-16"></i></div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Kegiatan Corrective (Breakdown)</p>
+                    <h3 class="text-3xl font-extrabold text-white mt-2">${correctiveCount}</h3>
+                    <div class="mt-4 flex items-center text-xs text-amber-400 space-x-1">
+                        <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                        <span>${inProgressReports} Unit dalam perbaikan</span>
+                    </div>
+                </div>
+                <div class="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-slate-800 p-6 rounded-2xl shadow-xl relative overflow-hidden group hover:border-emerald-500/50 transition-all">
+                    <div class="absolute top-0 right-0 p-4 text-emerald-500/20 group-hover:text-emerald-500/30 transition-all"><i data-lucide="check-circle-2" class="w-16 h-16"></i></div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Kegiatan Preventive (Rutinitas)</p>
+                    <h3 class="text-3xl font-extrabold text-white mt-2">${preventiveCount}</h3>
+                    <div class="mt-4 flex items-center text-xs text-emerald-400 space-x-1">
+                        <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+                        <span>100% Sesuai target mutu</span>
+                    </div>
+                </div>
+            `;
+
+            // Division Breakdown Cards
+            const divContainer = document.getElementById('division-cards-container');
+            divContainer.innerHTML = `
+                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-md">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-3 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-xl"><i data-lucide="wrench" class="w-6 h-6"></i></div>
+                            <div>
+                                <h4 class="font-bold text-white">Divisi Mekanik</h4>
+                                <p class="text-xs text-slate-400">Mesin & Transmisi Industri</p>
+                            </div>
+                        </div>
+                        <span class="text-2xl font-black text-blue-400">${mechanicCount}</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-3">
+                        <div class="bg-blue-500 h-full rounded-full" style="width: ${(mechanicCount / (totalTechs || 1)) * 100}%"></div>
+                    </div>
+                    <p class="text-xs text-slate-400">Mencakup perbaikan gearbox, konveyor, pompa hidrolik, dan sistem mekanis berat.</p>
+                </div>
+                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-md">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-3 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-xl"><i data-lucide="zap" class="w-6 h-6"></i></div>
+                            <div>
+                                <h4 class="font-bold text-white">Divisi Elektrik</h4>
+                                <p class="text-xs text-slate-400">Panel & Sistem Kelistrikan</p>
+                            </div>
+                        </div>
+                        <span class="text-2xl font-black text-amber-400">${electricCount}</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-3">
+                        <div class="bg-amber-500 h-full rounded-full" style="width: ${(electricCount / (totalTechs || 1)) * 100}%"></div>
+                    </div>
+                    <p class="text-xs text-slate-400">Mencakup panel distribusi (MDB), inverter, sensor PLC, dan pemeliharaan jaringan kabel pabrik.</p>
+                </div>
+                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-md">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-3 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-xl"><i data-lucide="truck" class="w-6 h-6"></i></div>
+                            <div>
+                                <h4 class="font-bold text-white">Divisi Otomotif</h4>
+                                <p class="text-xs text-slate-400">Forklift, Crane & Logistik</p>
+                            </div>
+                        </div>
+                        <span class="text-2xl font-black text-emerald-400">${automotiveCount}</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-3">
+                        <div class="bg-emerald-500 h-full rounded-full" style="width: ${(automotiveCount / (totalTechs || 1)) * 100}%"></div>
+                    </div>
+                    <p class="text-xs text-slate-400">Mencakup perawatan mesin diesel forklift, sistem kemudi, rem, dan alat berat pabrik.</p>
+                </div>
+            `;
+
+            // Recent Table
+            const recentTbody = document.getElementById('recent-reports-tbody');
+            recentTbody.innerHTML = reports.slice(0, 5).map(rep => `
+                <tr class="hover:bg-slate-800/30 transition-colors">
+                    <td class="py-3.5 px-4 font-mono font-medium text-orange-400">${rep.id}</td>
+                    <td class="py-3.5 px-4 font-medium text-white">${rep.technician}</td>
+                    <td class="py-3.5 px-4">
+                        <span class="px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                            rep.category === 'Mekanik' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                            rep.category === 'Elektrik' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                            'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        }">${rep.category}</span>
+                    </td>
+                    <td class="py-3.5 px-4">
+                        <span class="px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                            rep.type === 'Preventive' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                            'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        }">${rep.type}</span>
+                    </td>
+                    <td class="py-3.5 px-4 text-slate-300">${rep.duration}</td>
+                    <td class="py-3.5 px-4">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center space-x-1.5 ${
+                            rep.status === 'Selesai' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
+                            'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                        }">
+                            <span class="w-1.5 h-1.5 rounded-full ${rep.status === 'Selesai' ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}"></span>
+                            <span>${rep.status}</span>
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 text-right">
+                        <button onclick="viewReportDetail('${rep.id}')" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-all" title="Detail Laporan">
+                            <i data-lucide="eye" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderQualityDashboard() {
+            const kpiGrid = document.getElementById('quality-kpi-grid');
+            kpiGrid.innerHTML = `
+                <div class="bg-slate-950/80 border border-slate-800/80 p-5 rounded-2xl shadow-lg">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Target OEE Pabrik</span>
+                    <h3 class="text-3xl font-black text-emerald-400 mt-2">87.4%</h3>
+                    <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
+                        <span>Target: ≥ 85.0%</span>
+                        <span class="text-emerald-400 font-semibold">Tercapai (+2.4%)</span>
+                    </div>
+                </div>
+                <div class="bg-slate-950/80 border border-slate-800/80 p-5 rounded-2xl shadow-lg">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">PM Compliance</span>
+                    <h3 class="text-3xl font-black text-emerald-400 mt-2">100%</h3>
+                    <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
+                        <span>Target: 100%</span>
+                        <span class="text-emerald-400 font-semibold">Sempurna</span>
+                    </div>
+                </div>
+                <div class="bg-slate-950/80 border border-slate-800/80 p-5 rounded-2xl shadow-lg">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Rata-rata MTTR</span>
+                    <h3 class="text-3xl font-black text-amber-400 mt-2">3.3 Jam</h3>
+                    <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
+                        <span>Target: < 3.0 Jam</span>
+                        <span class="text-amber-400 font-semibold">Perlu Optimalisasi</span>
+                    </div>
+                </div>
+                <div class="bg-slate-950/80 border border-slate-800/80 p-5 rounded-2xl shadow-lg">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Rata-rata MTBF</span>
+                    <h3 class="text-3xl font-black text-cyan-400 mt-2">168 Jam</h3>
+                    <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
+                        <span>Target: > 150 Jam</span>
+                        <span class="text-cyan-400 font-semibold">Keandalan Tinggi</span>
+                    </div>
+                </div>
+            `;
+
+            const listContainer = document.getElementById('objectives-list-container');
+            listContainer.innerHTML = qualityObjectives.map(qo => `
+                <div class="bg-slate-900 border border-slate-800/80 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs font-mono bg-slate-800 text-slate-300 px-2 py-0.5 rounded">${qo.id}</span>
+                            <h4 class="font-bold text-white">${qo.title}</h4>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1">Target Mutu Perusahaan: <span class="text-slate-200 font-semibold">${qo.target}</span> | Aktual: <span class="text-emerald-400 font-semibold">${qo.actual}</span></p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold ${qo.status === 'Tercapai' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'}">
+                            ${qo.status}
+                        </span>
+                        <button onclick="editObjective('${qo.id}')" class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-all" title="Edit Sasaran">
+                            <i data-lucide="edit-3" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderCategoryFilterButtons() {
+            const container = document.getElementById('category-filter-buttons');
+            const categories = ['Semua', 'Mekanik', 'Elektrik', 'Otomotif'];
+            container.innerHTML = categories.map(cat => `
+                <button onclick="setCategoryFilter('${cat}')" class="px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-150 flex items-center space-x-1.5 ${
+                    categoryFilter === cat
+                        ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20 font-bold'
+                        : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-700/50'
+                }">
+                    ${cat === 'Mekanik' ? '<i data-lucide="wrench" class="w-3.5 h-3.5"></i>' :
+                      cat === 'Elektrik' ? '<i data-lucide="zap" class="w-3.5 h-3.5"></i>' :
+                      cat === 'Otomotif' ? '<i data-lucide="truck" class="w-3.5 h-3.5"></i>' : ''}
+                    <span>${cat}</span>
+                </button>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function setCategoryFilter(cat) {
+            categoryFilter = cat;
+            renderCategoryFilterButtons();
+            renderReportsTable();
+        }
+
+        function handleSearchInput(e) {
+            searchQuery = e.target.value.toLowerCase();
+            renderReportsTable();
+        }
+
+        function renderReportsTable() {
+            const tbody = document.getElementById('reports-table-tbody');
+            const filtered = reports.filter(r => {
+                const matchCat = categoryFilter === 'Semua' || r.category === categoryFilter;
+                const matchQuery = r.id.toLowerCase().includes(searchQuery) ||
+                                   r.technician.toLowerCase().includes(searchQuery) ||
+                                   r.damageDetail.toLowerCase().includes(searchQuery) ||
+                                   r.actionDetail.toLowerCase().includes(searchQuery);
+                return matchCat && matchQuery;
+            });
+
+            if(filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-500">Tidak ada laporan maintenance yang ditemukan.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(rep => `
+                <tr class="hover:bg-slate-800/30 transition-colors">
+                    <td class="py-3.5 px-4 font-mono font-medium text-orange-400">${rep.id}</td>
+                    <td class="py-3.5 px-4 text-xs text-slate-300">${rep.startDate.replace('T', ' ')}</td>
+                    <td class="py-3.5 px-4 font-medium text-white">${rep.technician}</td>
+                    <td class="py-3.5 px-4">
+                        <span class="px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                            rep.category === 'Mekanik' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                            rep.category === 'Elektrik' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                            'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        }">${rep.category}</span>
+                    </td>
+                    <td class="py-3.5 px-4">
+                        <span class="px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                            rep.type === 'Preventive' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                            'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        }">${rep.type}</span>
+                    </td>
+                    <td class="py-3.5 px-4 text-slate-300">${rep.duration}</td>
+                    <td class="py-3.5 px-4">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center space-x-1.5 ${
+                            rep.status === 'Selesai' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
+                            'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                        }">
+                            <span class="w-1.5 h-1.5 rounded-full ${rep.status === 'Selesai' ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}"></span>
+                            <span>${rep.status}</span>
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 text-right space-x-1">
+                        <button onclick="viewReportDetail('${rep.id}')" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-all" title="Detail"><i data-lucide="eye" class="w-4 h-4"></i></button>
+                        <button onclick="editReport('${rep.id}')" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-white rounded-lg transition-all" title="Edit"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                        <button onclick="deleteReport('${rep.id}')" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-red-400 hover:text-white rounded-lg transition-all" title="Hapus"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function renderTechniciansGrid() {
+            const grid = document.getElementById('technicians-grid');
+            grid.innerHTML = technicians.map(tech => `
+                <div class="bg-slate-900/80 border border-slate-800 p-6 rounded-2xl shadow-xl backdrop-blur-md flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-xs font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 px-2.5 py-1 rounded-full font-bold">${tech.id}</span>
+                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${tech.status === 'Aktif' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'}">${tech.status}</span>
+                        </div>
+                        <h4 class="text-base font-bold text-white mb-1">${tech.name}</h4>
+                        <div class="inline-block px-2.5 py-0.5 rounded bg-slate-800 text-slate-300 text-xs font-medium mb-3">${tech.category}</div>
+                        <p class="text-xs text-slate-400 flex items-center space-x-2">
+                            <i data-lucide="phone" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span>${tech.contact}</span>
+                        </p>
+                    </div>
+                    <div class="flex items-center justify-end space-x-2 pt-4 mt-6 border-t border-slate-800">
+                        <button onclick="editTechnician('${tech.id}')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-all">Edit</button>
+                        <button onclick="deleteTechnician('${tech.id}')" class="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-xs font-semibold transition-all">Hapus</button>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function renderAll() {
+            renderDashboard();
+            renderQualityDashboard();
+            renderCategoryFilterButtons();
+            renderReportsTable();
+            renderTechniciansGrid();
+            lucide.createIcons();
+        }
+
+        function populateTechnicianDropdown(selectedName = '') {
+            const select = document.getElementById('report-technician');
+            select.innerHTML = technicians.map(t => `<option value="${t.name}" ${t.name === selectedName ? 'selected' : ''}>${t.name} (${t.category})</option>`).join('');
+        }
+
+        function openReportModal(reportId = null) {
+            populateTechnicianDropdown();
+            document.getElementById('report-edit-id').value = '';
+            document.getElementById('report-form').reset();
+            document.getElementById('report-modal-title').textContent = 'Buat Laporan Maintenance Baru';
+            
+            // Default dates
+            const now = new Date().toISOString().slice(0,16);
+            document.getElementById('report-start').value = now;
+            document.getElementById('report-end').value = now;
+
+            if(reportId) {
+                const rep = reports.find(r => r.id === reportId);
+                if(rep) {
+                    document.getElementById('report-edit-id').value = rep.id;
+                    document.getElementById('report-modal-title').textContent = `Edit Laporan: ${rep.id}`;
+                    document.getElementById('report-start').value = rep.startDate;
+                    document.getElementById('report-end').value = rep.endDate;
+                    populateTechnicianDropdown(rep.technician);
+                    document.getElementById('report-category').value = rep.category;
+                    document.getElementById('report-type').value = rep.type;
+                    document.getElementById('report-damage').value = rep.damageDetail;
+                    document.getElementById('report-action').value = rep.actionDetail;
+                    document.getElementById('report-used').value = rep.usedParts;
+                    document.getElementById('report-required').value = rep.requiredParts;
+                    document.getElementById('report-scrapped').value = rep.scrappedParts;
+                    document.getElementById('report-status').value = rep.status;
+                }
+            }
+            document.getElementById('report-modal').classList.remove('hidden');
+        }
+
+        function closeReportModal() {
+            document.getElementById('report-modal').classList.add('hidden');
+        }
+
+        function handleSaveReport(e) {
+            e.preventDefault();
+            const editId = document.getElementById('report-edit-id').value;
+            const startDate = document.getElementById('report-start').value;
+            const endDate = document.getElementById('report-end').value;
+
+            let durationStr = '2.0 Jam';
+            if(startDate && endDate) {
+                const diffMs = new Date(endDate) - new Date(startDate);
+                if(diffMs > 0) {
+                    durationStr = `${(diffMs / (1000 * 60 * 60)).toFixed(1)} Jam`;
+                }
+            }
+
+            const reportData = {
+                id: editId || `REP-2026-${String(reports.length + 1).padStart(3, '0')}`,
+                startDate,
+                endDate,
+                duration: durationStr,
+                technician: document.getElementById('report-technician').value,
+                category: document.getElementById('report-category').value,
+                type: document.getElementById('report-type').value,
+                damageDetail: document.getElementById('report-damage').value,
+                actionDetail: document.getElementById('report-action').value,
+                planning: 'Pemeriksaan lanjutan berkala.',
+                usedParts: document.getElementById('report-used').value,
+                requiredParts: document.getElementById('report-required').value,
+                scrappedParts: document.getElementById('report-scrapped').value,
+                status: document.getElementById('report-status').value
+            };
+
+            if(editId) {
+                reports = reports.map(r => r.id === editId ? reportData : r);
+                showToast('Laporan maintenance berhasil diperbarui!');
+            } else {
+                reports.unshift(reportData);
+                showToast('Laporan maintenance baru berhasil dicatat!');
+            }
+            closeReportModal();
+            renderAll();
+        }
+
+        function editReport(id) {
+            openReportModal(id);
+        }
+
+        function deleteReport(id) {
+            if(confirm('Apakah Anda yakin ingin menghapus laporan maintenance ini?')) {
+                reports = reports.filter(r => r.id !== id);
+                showToast('Laporan maintenance berhasil dihapus.', 'info');
+                renderAll();
+            }
+        }
+
+        function viewReportDetail(id) {
+            const rep = reports.find(r => r.id === id);
+            if(!rep) return;
+            document.getElementById('view-rep-id').textContent = rep.id;
+            document.getElementById('view-rep-tech').textContent = rep.technician;
+            document.getElementById('view-rep-cat').textContent = rep.category;
+            document.getElementById('view-rep-type').textContent = rep.type;
+            document.getElementById('view-rep-duration').textContent = rep.duration;
+            document.getElementById('view-rep-start').textContent = rep.startDate.replace('T', ' ');
+            document.getElementById('view-rep-end').textContent = rep.endDate.replace('T', ' ');
+            document.getElementById('view-rep-damage').textContent = rep.damageDetail;
+            document.getElementById('view-rep-action').textContent = rep.actionDetail;
+            document.getElementById('view-rep-used').textContent = rep.usedParts || '-';
+            document.getElementById('view-rep-required').textContent = rep.requiredParts || '-';
+            document.getElementById('view-rep-scrapped').textContent = rep.scrappedParts || '-';
+            document.getElementById('view-report-modal').classList.remove('hidden');
+        }
+
+        function closeViewReportModal() {
+            document.getElementById('view-report-modal').classList.add('hidden');
+        }
+
+        // Technician Modals
+        function openTechModal(techId = null) {
+            document.getElementById('tech-edit-id').value = '';
+            document.getElementById('tech-form').reset();
+            document.getElementById('tech-modal-title').textContent = 'Tambah Teknisi Baru';
+
+            if(techId) {
+                const t = technicians.find(item => item.id === techId);
+                if(t) {
+                    document.getElementById('tech-edit-id').value = t.id;
+                    document.getElementById('tech-modal-title').textContent = `Edit Teknisi: ${t.name}`;
+                    document.getElementById('tech-name').value = t.name;
+                    document.getElementById('tech-category').value = t.category;
+                    document.getElementById('tech-contact').value = t.contact;
+                    document.getElementById('tech-status').value = t.status;
+                }
+            }
+            document.getElementById('tech-modal').classList.remove('hidden');
+        }
+
+        function closeTechModal() {
+            document.getElementById('tech-modal').classList.add('hidden');
+        }
+
+        function handleSaveTechnician(e) {
+            e.preventDefault();
+            const editId = document.getElementById('tech-edit-id').value;
+            const techData = {
+                id: editId || `TECH-${String(technicians.length + 1).padStart(3, '0')}`,
+                name: document.getElementById('tech-name').value,
+                category: document.getElementById('tech-category').value,
+                contact: document.getElementById('tech-contact').value,
+                status: document.getElementById('tech-status').value
+            };
+
+            if(editId) {
+                technicians = technicians.map(t => t.id === editId ? techData : t);
+                showToast('Data teknisi berhasil diperbarui!');
+            } else {
+                technicians.push(techData);
+                showToast('Teknisi baru berhasil ditambahkan!');
+            }
+            closeTechModal();
+            renderAll();
+        }
+
+        function editTechnician(id) {
+            openTechModal(id);
+        }
+
+        function deleteTechnician(id) {
+            if(confirm('Apakah Anda yakin ingin menghapus teknisi ini?')) {
+                technicians = technicians.filter(t => t.id !== id);
+                showToast('Teknisi berhasil dihapus.', 'info');
+                renderAll();
+            }
+        }
+
+        // Quality Objective modal mockup/handler
+        function openObjectiveModal() {
+            const title = prompt('Masukkan Nama Sasaran Mutu / KPI Baru:', 'MTBF > 180 Jam');
+            if(title) {
+                qualityObjectives.push({
+                    id: `QO-0${qualityObjectives.length + 1}`,
+                    title: title,
+                    target: '100 Jam',
+                    actual: '95 Jam',
+                    status: 'Dalam Proses',
+                    color: 'amber'
+                });
+                showToast('Sasaran mutu baru berhasil ditambahkan!');
+                renderQualityDashboard();
+            }
+        }
+
+        function editObjective(id) {
+            const qo = qualityObjectives.find(q => q.id === id);
+            if(qo) {
+                const newActual = prompt(`Update nilai aktual untuk ${qo.title}:`, qo.actual);
+                if(newActual !== null) {
+                    qo.actual = newActual;
+                    showToast('Sasaran mutu berhasil diperbarui!');
+                    renderQualityDashboard();
+                }
+            }
+        }
+
+        // Export Functions
+        function exportToCSV() {
+            const headers = ['ID', 'Tanggal Mulai', 'Teknisi', 'Kategori', 'Jenis', 'Durasi', 'Status', 'Detail Kerusakan', 'Tindakan'];
+            const rows = reports.map(r => [
+                r.id, r.startDate, `"${r.technician}"`, r.category, r.type, r.duration, r.status, `"${r.damageDetail}"`, `"${r.actionDetail}"`
+            ]);
+            const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', `Maintenance_Reports_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('Berhasil mengekspor data ke CSV!');
+        }
+
+        function exportToExcel() {
+            let tableHTML = `<table><tr><th>ID</th><th>Tanggal</th><th>Teknisi</th><th>Kategori</th><th>Jenis</th><th>Durasi</th><th>Status</th><th>Kerusakan</th><th>Tindakan</th></tr>`;
+            reports.forEach(r => {
+                tableHTML += `<tr><td>${r.id}</td><td>${r.startDate}</td><td>${r.technician}</td><td>${r.category}</td><td>${r.type}</td><td>${r.duration}</td><td>${r.status}</td><td>${r.damageDetail}</td><td>${r.actionDetail}</td></tr>`;
+            });
+            tableHTML += `</table>`;
+            const blob = new Blob([tableHTML], { type: 'application/vnd.ms-excel' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `Maintenance_Report_${new Date().toISOString().slice(0,10)}.xls`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('Berhasil mengunduh format Excel (.xls)!');
+        }
+
+        // Initialize App on Load
+        window.onload = function() {
+            renderAll();
+        };
+    </script>
+</body>
+</html>
